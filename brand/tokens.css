@@ -1,0 +1,80 @@
+/* Дзеркало влади – токени бренду. Згенеровано з brand/tokens.json */
+@font-face { font-family: "Literata"; src: url("fonts/Literata-ExtraBold.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Literata"; src: url("fonts/Literata-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Onest"; src: url("fonts/Onest-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Onest"; src: url("fonts/Onest-SemiBold.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Onest"; src: url("fonts/Onest-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+
+:root {
+  --paper: #F4F2ED;
+  --surface: #FFFFFF;
+  --ink: #121418;
+  --ink-muted: #5A5F68;
+  --rule: #D8D2C4;
+  --glass: #0E6A70;
+  --glass-deep: #0A4F53;
+  --glint: #9FD3CF;
+  --glass-soft: #E3EFEE;
+  --on-glass: #F4F2ED;
+  --urgent: #C2412D;
+  --on-urgent: #FFFFFF;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-none: 0px;
+  --radius-sm: 2px;
+  --radius-round: 9999px;
+  --font-serif: "Literata", Georgia, "Times New Roman", serif;
+  --font-sans: "Onest", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121418;
+    --surface: #1B1E24;
+    --ink: #F2EFE8;
+    --ink-muted: #A7ABB3;
+    --rule: #2E323A;
+    --glass: #5FB3AE;
+    --glass-deep: #8CCBC6;
+    --glint: #2D6E6B;
+    --glass-soft: #16302F;
+    --on-glass: #121418;
+    --urgent: #E8664F;
+    --on-urgent: #121418;
+  }
+}
+:root[data-theme="dark"] {
+    --paper: #121418;
+    --surface: #1B1E24;
+    --ink: #F2EFE8;
+    --ink-muted: #A7ABB3;
+    --rule: #2E323A;
+    --glass: #5FB3AE;
+    --glass-deep: #8CCBC6;
+    --glint: #2D6E6B;
+    --glass-soft: #16302F;
+    --on-glass: #121418;
+    --urgent: #E8664F;
+    --on-urgent: #121418;
+}
+
+body { background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
+a { color: var(--glass); } a:hover { color: var(--glass-deep); }
+
+.dv-display { font-family: var(--font-serif); font-size: 64px; line-height: 68px; font-weight: 800; }
+.dv-h1 { font-family: var(--font-serif); font-size: 40px; line-height: 46px; font-weight: 800; }
+.dv-h2 { font-family: var(--font-serif); font-size: 28px; line-height: 34px; font-weight: 700; }
+.dv-h3 { font-family: var(--font-serif); font-size: 21px; line-height: 27px; font-weight: 700; }
+.dv-lead { font-family: var(--font-sans); font-size: 19px; line-height: 30px; font-weight: 400; }
+.dv-body { font-family: var(--font-sans); font-size: 16px; line-height: 26px; font-weight: 400; }
+.dv-caption { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 400; }
+.dv-meta { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 600; }
+.dv-label { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 700; }
+.dv-label { text-transform: uppercase; letter-spacing: .08em; color: var(--glass); }
+.dv-urgent { background: var(--urgent); color: var(--on-urgent); }
