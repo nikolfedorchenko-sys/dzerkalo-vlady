@@ -1,4 +1,6 @@
 Новини/
 *.tmp
-.DS_Store
+.claude/settings.local.json
 Thumbs.db
+desktop.ini
+.DS_Store
