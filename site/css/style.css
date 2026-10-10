@@ -109,7 +109,7 @@ a.label:hover { color: var(--green-deep); }
 .photo-credit { position: absolute; left: 12px; bottom: 12px; background: rgba(255,255,255,0.88); border-radius: var(--radius-sm); padding: 3px 8px; font-size: 11px; line-height: 1.5; color: var(--muted); }
 .photo-credit--right { left: auto; right: 12px; }
 .hero__body { flex: 1 1 380px; min-width: 0; padding: clamp(24px, 4vw, 48px); display: flex; flex-direction: column; justify-content: center; gap: 18px; }
-.hero__title { font-size: clamp(1.9rem, 3.4vw, 2.75rem); line-height: 1.12; letter-spacing: -0.01em; }
+.hero__title { font-size: clamp(1.6rem, 2.6vw, 2.1rem); line-height: 1.12; letter-spacing: -0.01em; overflow-wrap: break-word; hyphens: auto; }
 .hero__lead { font-size: 18px; line-height: 1.6; color: var(--text-2); }
 .hero__foot { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; }
 

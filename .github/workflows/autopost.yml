@@ -1,12 +1,12 @@
 # Автопостинг «Дзеркало влади».
-# Години публікації – у autopost/config.yaml (рядок slots). GitHub будить робота щогодини,
+# Години публікації – у autopost/config.yaml (рядок slots). Cloudflare будить робота щогодини,
 # але працює він тільки в ці години; решту разів лише перевіряє час (кілька секунд, без Claude).
 # Секрети й режим задаються в GitHub: Settings → Secrets and variables → Actions (див. autopost/README.md).
 name: Автопостинг
 
 on:
-  schedule:
-    - cron: "5 5-19 * * *"   # UTC щогодини; покриває 08–21 за Києвом і влітку, і взимку
+  # Будить робота Cloudflare (autopost/budylnyk) щогодини з дією «За розкладом»;
+  # вбудований розклад GitHub не використовуємо – він ненадійно спрацьовує.
   workflow_dispatch:          # кнопка «Run workflow» – запустити вручну (працює в будь-який час)
     inputs:
       action:
@@ -16,6 +16,7 @@ on:
         options:
           - "Звичайний запуск"
           - "Перевірити Facebook"
+          - "За розкладом"
 
 concurrency:
   group: autopost
@@ -39,7 +40,7 @@ jobs:
         run: |
           H=$(TZ=Europe/Kyiv date +%H)
           SLOTS=$(grep -E '^slots:' autopost/config.yaml | cut -d'"' -f2)
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || echo " $SLOTS " | grep -q " $H "; then
+          if [ "${{ inputs.action }}" != "За розкладом" ] || echo " $SLOTS " | grep -q " $H "; then
             echo "go=true" >> "$GITHUB_OUTPUT"; echo "Зараз $H:00 за Києвом – працюємо"
           else
             echo "go=false" >> "$GITHUB_OUTPUT"; echo "Зараз $H:00 за Києвом – не година публікації ($SLOTS)"
