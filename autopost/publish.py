@@ -49,7 +49,7 @@ def site_entry(a, nid, date):
         "lead": a["lead"],
         "date": date,
         "impact": {"text": a["impact"]},
-        "body": a["body"],
+        "body": article_body(a),
         "sources": a["sources"],
         "auto": True,  # позначка: матеріал зробив автопостинг
     }
@@ -58,6 +58,19 @@ def site_entry(a, nid, date):
     if a.get("urgent"):
         entry["urgent"] = True
     return entry
+
+
+def article_body(a):
+    """Текст статті з розділами: що сталося, цитата, «Контекст», «Що далі»."""
+    body = list(a["facts"])
+    q = a.get("quote") or {}
+    if q.get("text"):
+        body.append({"quote": q["text"], "who": q.get("who", "")})
+    if a.get("context"):
+        body += [{"h2": "Контекст"}, *a["context"]]
+    if a.get("next"):
+        body += [{"h2": "Що далі"}, *a["next"]]
+    return body
 
 
 def expire_urgent(data, now_local, hours):
@@ -160,7 +173,7 @@ def notify(token, chat_id, text):
 # ---------- Facebook ----------
 
 def send_facebook(page_id, token, a, url, card_path):
-    message = f"{a['title']}\n\n{a['facebook']}\n\nДетальніше: {url}"
+    message = f"{a['facebook']}\n\nПовністю на сайті: {url}"
     with open(card_path, "rb") as f:
         r = requests.post(f"{FB_API}/{page_id}/photos", timeout=120,
                           data={"message": message, "access_token": token}, files={"source": f})

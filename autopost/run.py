@@ -69,11 +69,21 @@ def check_draft(a, texts):
     problems = []
     if len(a["title"]) > 100:
         problems.append("заголовок задовгий")
-    if not a["body"] or not a["telegram"]:
+    if not a["facts"] or not a["telegram"] or not a["facebook"]:
         problems.append("порожній текст")
     if any(ch in a["title"] for ch in "!") or a["title"].isupper():
         problems.append("знак оклику чи капс у заголовку")
+    if len(" ".join(a["telegram"])) > 700:
+        problems.append("пост для Telegram задовгий")
     return problems
+
+
+def skip_obvious(items, words):
+    """Відсіює очевидно не наше (спорт, погода, гороскопи…) ще до Claude – це безкоштовно."""
+    words = [w.casefold() for w in words]
+    keep = [it for it in items if not any(w in (it["title"] + " " + it["summary"]).casefold() for w in words)]
+    log.info("Відсіяно словами-фільтрами: %d", len(items) - len(keep))
+    return keep
 
 
 def facebook_check(cfg):
@@ -105,7 +115,8 @@ def main():
     now_local = now.astimezone(KYIV)
     if os.environ.get("DV_ACTION") == "facebook-check":
         return facebook_check(cfg)
-    log.info("Режим: %s, модель: %s, доступ: %s", mode, brain.MODEL, brain.engine())
+    log.info("Режим: %s, моделі: %s (тексти) / %s (відбір, перевірка), доступ: %s",
+             mode, brain.MODEL, brain.MODEL_FAST, brain.engine())
     if not brain.engine():
         log.warning("Немає CLAUDE_CODE_OAUTH_TOKEN (чи ANTHROPIC_API_KEY) – автопостинг ще не налаштовано")
         return
@@ -127,16 +138,26 @@ def main():
     uniq = {}
     for it in fresh:
         uniq.setdefault(it["url"], it)
-    fresh = sorted(uniq.values(), key=lambda x: x["published"], reverse=True)[: lim["max_items_for_triage"]]
+    fresh = sorted(uniq.values(), key=lambda x: x["published"], reverse=True)
+    filtered = skip_obvious(fresh, cfg.get("skip_words", []))
+    for it in fresh:  # що відсіяли – теж «бачили», щоб не перевіряти вдруге
+        if it not in filtered:
+            state["seen"][it["key"]] = now.isoformat()
+    fresh = filtered[: lim["max_items_for_triage"]]
     log.info("Нових матеріалів: %d (усього свіжих %d)", len(fresh), len(items))
 
     report = []
     published, rejected = [], []
-    day_ago = (now - timedelta(hours=24)).isoformat()
-    budget = min(lim["max_posts_per_run"],
-                 lim["max_posts_per_day"] - sum(1 for p in state["published"] if p["at"] > day_ago))
+    day_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat()
+    day_left = lim["max_posts_per_day"] - sum(1 for p in state["published"] if p["at"] > day_start)
 
-    if fresh and budget > 0:
+    def allowed(story):
+        """Денний ліміт; дуже важливе й термінове проходить і понад нього."""
+        if len(published) >= lim["max_posts_per_run"]:
+            return False
+        return len(published) < day_left or story["urgent"] or story["importance"] >= lim["bypass_importance"]
+
+    if fresh:
         # 2. Відбір сюжетів
         recent = [p["title"] for p in state["published"] if p["at"] > (now - timedelta(hours=72)).isoformat()]
         try:
@@ -157,8 +178,8 @@ def main():
 
         # 3. Написання і перевірка
         for story in stories:
-            if len(published) >= budget:
-                break
+            if not allowed(story):
+                continue
             picked = [fresh[i] for i in story["items"] if 0 <= i < len(fresh)][:4]
             if not picked:
                 continue
@@ -184,8 +205,6 @@ def main():
             else:
                 rejected.append((draft.get("title", story["topic"]), verdict["problems"]))
                 log.info("ВІДХИЛЕНО: %s – %s", draft.get("title"), "; ".join(verdict["problems"]))
-    elif budget <= 0:
-        log.info("Денний ліміт постів вичерпано")
 
     # 4. Публікація
     data = publish.load_news()
@@ -218,6 +237,8 @@ def main():
         if mode == "dry":
             (OUT / f"{a['id']}.telegram.html").write_text(text, encoding="utf-8")
             (OUT / f"{a['id']}.facebook.txt").write_text(a["facebook"], encoding="utf-8")
+            (OUT / f"{a['id']}.site.json").write_text(json.dumps(publish.site_entry(a, a["id"], date),
+                                                      ensure_ascii=False, indent=2), encoding="utf-8")
             where.append("чернетка в autopost/out")
         else:
             if tg_token and tg_chat:
@@ -240,7 +261,7 @@ def main():
 
     for title, problems in rejected:
         report.append(f"<b>Відхилено</b>: {escape(title)}\n– " + "\n– ".join(escape(p) for p in problems))
-    if src_errors and now_local.hour == 9 and now_local.minute < 30:  # про збої джерел – раз на день
+    if src_errors and now_local.hour == 8:  # про збої джерел – раз на день, у першому запуску
         report.append("Джерела, що не відповідали:\n" + "\n".join(escape(e) for e in src_errors))
 
     save_state(state)

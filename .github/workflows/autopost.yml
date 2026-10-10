@@ -1,11 +1,13 @@
-# Автопостинг «Дзеркало влади»: щогодини з 07:00 до 22:00 за Києвом.
+# Автопостинг «Дзеркало влади».
+# Години публікації – у autopost/config.yaml (рядок slots). GitHub будить робота щогодини,
+# але працює він тільки в ці години; решту разів лише перевіряє час (кілька секунд, без Claude).
 # Секрети й режим задаються в GitHub: Settings → Secrets and variables → Actions (див. autopost/README.md).
 name: Автопостинг
 
 on:
   schedule:
-    - cron: "5 4-19 * * *"   # UTC; влітку це 07:05–22:05 за Києвом, узимку 06:05–21:05
-  workflow_dispatch:          # кнопка «Run workflow» – запустити вручну
+    - cron: "5 5-19 * * *"   # UTC щогодини; покриває 08–21 за Києвом і влітку, і взимку
+  workflow_dispatch:          # кнопка «Run workflow» – запустити вручну (працює в будь-який час)
     inputs:
       action:
         description: "Що зробити"
@@ -23,9 +25,31 @@ permissions:
   contents: write             # щоб додавати новини в site/data/news.json
 
 jobs:
-  run:
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    outputs:
+      go: ${{ steps.slot.outputs.go }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: autopost/config.yaml
+          sparse-checkout-cone-mode: false
+      - id: slot
+        name: Чи зараз година публікації
+        run: |
+          H=$(TZ=Europe/Kyiv date +%H)
+          SLOTS=$(grep -E '^slots:' autopost/config.yaml | cut -d'"' -f2)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || echo " $SLOTS " | grep -q " $H "; then
+            echo "go=true" >> "$GITHUB_OUTPUT"; echo "Зараз $H:00 за Києвом – працюємо"
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"; echo "Зараз $H:00 за Києвом – не година публікації ($SLOTS)"
+          fi
+
+  run:
+    needs: check
+    if: needs.check.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -51,7 +75,8 @@ jobs:
         env:
           DV_MODE: ${{ vars.DV_MODE || 'test' }}
           DV_ACTION: ${{ inputs.action == 'Перевірити Facebook' && 'facebook-check' || '' }}
-          DV_MODEL: ${{ vars.DV_MODEL }}
+          DV_MODEL: ${{ vars.DV_MODEL }}             # модель для текстів (за замовчуванням Opus)
+          DV_MODEL_FAST: ${{ vars.DV_MODEL_FAST }}   # модель для відбору й перевірки (за замовчуванням Sonnet)
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}   # підписка Max
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}               # запасний варіант: платний API
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
