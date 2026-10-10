@@ -200,7 +200,8 @@
     if (hero) {
       var p = hero.photo;
       var fig = p && p.file ? '<figure class="hero__fig"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" width="1200" height="800" fetchpriority="high"' + pos(p) + '><figcaption class="photo-credit">' + esc(credit(p)) + '</figcaption></figure>' : '';
-      var src = hero.sources && hero.sources[0] ? ' · Джерело: ' + esc(hero.sources[0].title) : '';
+      /* Коротка назва джерела – до двокрапки: «AFP / France 24: Київ…» → «AFP / France 24». */
+      var src = hero.sources && hero.sources[0] ? ' · Джерело: ' + esc(String(hero.sources[0].title).split(':')[0]) : '';
       heroEl.innerHTML = fig + '<div class="hero__body">' +
         (kicker(hero) ? '<a class="tag" href="' + rubricUrl(hero.rubric) + '">' + esc(kicker(hero)) + '</a>' : '') +
         '<h1 class="hero__title"><a href="' + articleUrl(hero) + '">' + esc(hero.title) + '</a></h1>' +
