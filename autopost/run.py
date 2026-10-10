@@ -69,7 +69,7 @@ def check_draft(a, texts):
     problems = []
     if len(a["title"]) > 100:
         problems.append("заголовок задовгий")
-    if not a["facts"] or not a["telegram"] or not a["facebook"]:
+    if not a["telegram"] or ("facts" in a and (not a["facts"] or not a["facebook"])):
         problems.append("порожній текст")
     if any(ch in a["title"] for ch in "!") or a["title"].isupper():
         problems.append("знак оклику чи капс у заголовку")
@@ -149,13 +149,23 @@ def main():
     report = []
     published, rejected = [], []
     day_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat()
-    day_left = lim["max_posts_per_day"] - sum(1 for p in state["published"] if p["at"] > day_start)
+    today = [p for p in state["published"] if p["at"] > day_start]
+    tg_left = lim["max_posts_per_day"] - len(today)
+    full_left = lim["site_max_per_day"] - sum(1 for p in today if p.get("full", True))
 
-    def allowed(story):
-        """Денний ліміт; дуже важливе й термінове проходить і понад нього."""
+    def important(story):
+        return story["urgent"] or story["importance"] >= lim["bypass_importance"]
+
+    def plan(story):
+        """None – пропустити; "full" – сайт + Facebook + Telegram; "short" – тільки Telegram."""
         if len(published) >= lim["max_posts_per_run"]:
-            return False
-        return len(published) < day_left or story["urgent"] or story["importance"] >= lim["bypass_importance"]
+            return None
+        if len(published) >= tg_left and not important(story):
+            return None
+        fulls = sum(1 for a in published if a["_full"])
+        if story["importance"] >= lim["site_min_importance"] and (fulls < full_left or important(story)):
+            return "full"
+        return "short"
 
     if fresh:
         # 2. Відбір сюжетів
@@ -178,7 +188,8 @@ def main():
 
         # 3. Написання і перевірка
         for story in stories:
-            if not allowed(story):
+            kind = plan(story)
+            if not kind:
                 continue
             picked = [fresh[i] for i in story["items"] if 0 <= i < len(fresh)][:4]
             if not picked:
@@ -187,7 +198,7 @@ def main():
             picked.sort(key=lambda it: it["kind"] != "official")
             texts = [{**it, "text": collect.full_text(it)} for it in picked]
             try:
-                draft = fix_dashes(brain.write(story, texts))
+                draft = fix_dashes((brain.write if kind == "full" else brain.write_short)(story, texts))
                 problems = check_draft(draft, texts)
                 verdict = brain.review(draft, texts) if not problems else {"ok": False, "problems": problems}
             except brain.LimitReached as e:
@@ -199,48 +210,51 @@ def main():
                 log.exception("Помилка при написанні")
                 verdict, draft = {"ok": False, "problems": [f"помилка: {e}"]}, {"title": story["topic"]}
             if verdict["ok"]:
-                draft["_story"] = story
+                draft["_story"], draft["_full"], draft["_texts"] = story, kind == "full", texts
                 published.append(draft)
-                log.info("ГОТОВО: %s", draft["title"])
+                log.info("ГОТОВО (%s): %s", "сайт+FB+TG" if kind == "full" else "тільки TG", draft["title"])
             else:
                 rejected.append((draft.get("title", story["topic"]), verdict["problems"]))
                 log.info("ВІДХИЛЕНО: %s – %s", draft.get("title"), "; ".join(verdict["problems"]))
 
-    # 4. Публікація
+    # 4. Публікація: повні матеріали – на сайт
+    full = [a for a in published if a["_full"]]
     data = publish.load_news()
     date = now_local.strftime("%Y-%m-%dT%H:%M")
     for a in published:
         a["id"] = publish.unique_id(data["news"], a["id"])
+    for a in full:
         data["news"].insert(0, publish.site_entry(a, a["id"], date))
 
     OUT.mkdir(exist_ok=True)
     if mode == "live":
         changed = publish.expire_urgent(data, now_local, lim["urgent_hours"])
-        if publish.update_number_of_day(data, published, now_local):
+        if publish.update_number_of_day(data, full, now_local):
             log.info("Цифра дня: %s – %s", data["numberOfDay"]["value"], data["numberOfDay"]["text"])
-        if published or changed:
+        if full or changed:
             publish.save_news(data)
-            msg = ("Автопостинг: " + "; ".join(a["title"] for a in published)) if published else \
+            msg = ("Автопостинг: " + "; ".join(a["title"] for a in full)) if full else \
                 "Автопостинг: зняти «Терміново» зі старих новин"
-            if publish.git_push(msg) and published:
-                publish.wait_for_site([a["id"] for a in published])
-    elif published:
-        drafts = [publish.site_entry(a, a["id"], date) for a in published]
+            if publish.git_push(msg) and full:
+                publish.wait_for_site([a["id"] for a in full])
+    elif full:
+        drafts = [publish.site_entry(a, a["id"], date) for a in full]
         (OUT / "drafts.json").write_text(json.dumps(drafts, ensure_ascii=False, indent=2), encoding="utf-8")
 
     for a in published:
-        url = publish.article_url(a["id"])
+        url = publish.article_url(a["id"]) if a["_full"] else ""
         label = brain.RUBRICS.get(a["rubric"], "")
         src_title = a["sources"][0]["title"] if a["sources"] else ""
         card_path = card.render(OUT / f"{a['id']}.png", label, a["card_title"] or a["title"], src_title,
                                 urgent=a.get("urgent", False))
-        text = publish.telegram_text(a, label, url, cfg.get("submit_url"))
+        text = publish.telegram_text(a, label, url, cfg.get("channel_url"), cfg.get("submit_url"))
         where = []
         if mode == "dry":
             (OUT / f"{a['id']}.telegram.html").write_text(text, encoding="utf-8")
-            (OUT / f"{a['id']}.facebook.txt").write_text(a["facebook"], encoding="utf-8")
-            (OUT / f"{a['id']}.site.json").write_text(json.dumps(publish.site_entry(a, a["id"], date),
-                                                      ensure_ascii=False, indent=2), encoding="utf-8")
+            if a["_full"]:
+                (OUT / f"{a['id']}.facebook.txt").write_text(a["facebook"], encoding="utf-8")
+                (OUT / f"{a['id']}.site.json").write_text(json.dumps(publish.site_entry(a, a["id"], date),
+                                                          ensure_ascii=False, indent=2), encoding="utf-8")
             where.append("чернетка в autopost/out")
         else:
             if tg_token and tg_chat:
@@ -249,7 +263,7 @@ def main():
                     where.append("Telegram" + (" (пробний)" if mode == "test" else ""))
                 except Exception as e:  # noqa: BLE001
                     report.append(f"Telegram не прийняв пост: {escape(str(e))}")
-            if mode == "live":
+            if mode == "live" and a["_full"]:
                 where.append("сайт")
                 if fb_page and fb_token:
                     try:
@@ -257,9 +271,11 @@ def main():
                         where.append("Facebook")
                     except Exception as e:  # noqa: BLE001
                         report.append(f"Facebook не прийняв пост: {escape(str(e))}")
-        state["published"].append({"at": now.isoformat(), "id": a["id"], "title": a["title"], "mode": mode})
+        state["published"].append({"at": now.isoformat(), "id": a["id"], "title": a["title"], "mode": mode,
+                                   "full": a["_full"]})
+        title = escape(a["title"])
         report.append(f"<b>Опубліковано</b> ({', '.join(where) or 'нікуди'}): "
-                      f"<a href=\"{escape(url)}\">{escape(a['title'])}</a>")
+                      + (f"<a href=\"{escape(url)}\">{title}</a>" if url else title))
 
     for title, problems in rejected:
         report.append(f"<b>Відхилено</b>: {escape(title)}\n– " + "\n– ".join(escape(p) for p in problems))

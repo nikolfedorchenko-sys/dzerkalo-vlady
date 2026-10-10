@@ -244,6 +244,35 @@ def write(story, texts):
     return _ask(task, content, ARTICLE_SCHEMA, "high", MODEL)
 
 
+SHORT_TASK = f"""Напиши короткий пост ДВ для Telegram про сюжет нижче, спираючись тільки на тексти джерел.
+
+Поля:
+- id: коротка адреса латиницею через дефіс, 3–6 слів.
+- rubric: одна з: {{rubrics}}.
+- title: заголовок до 80 знаків, одна думка.
+- card_title: заголовок для картинки-картки, до 70 знаків.
+- sources: назва органу чи медіа і посилання – тільки з наданого списку, першоджерело влади – першим.
+- urgent: true тільки якщо рішення вже ухвалено або подія відбувається зараз.
+
+TELEGRAM
+{rule("telegram")}"""
+
+SHORT_SCHEMA = {
+    "type": "object",
+    "properties": {k: ARTICLE_SCHEMA["properties"][k]
+                   for k in ("id", "rubric", "title", "card_title", "telegram", "sources", "urgent")},
+    "required": ["id", "rubric", "title", "card_title", "telegram", "sources", "urgent"],
+    "additionalProperties": False,
+}
+
+
+def write_short(story, texts):
+    """Короткий пост тільки для Telegram – пише Sonnet, це дешево."""
+    task = SHORT_TASK.format(rubrics=", ".join(f"{k} ({RUBRICS[k]})" for k in AUTO_RUBRICS))
+    content = f"Сюжет: {story['topic']}\nЗапропонована рубрика: {story['rubric']}\n\n{_sources_block(texts)}"
+    return _ask(task, content, SHORT_SCHEMA, "medium", MODEL_FAST)
+
+
 def review(draft, texts):
     content = ("ЧЕРНЕТКА:\n" + json.dumps(draft, ensure_ascii=False, indent=1)
                + "\n\nТЕКСТИ ДЖЕРЕЛ:\n\n" + _sources_block(texts))

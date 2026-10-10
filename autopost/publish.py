@@ -159,16 +159,21 @@ def _tg(method, token, **kw):
     return data["result"]
 
 
-def telegram_text(a, rubric_label, url, submit_url):
-    """Будова поста за brand/BRAND.md, розділ 9."""
+def telegram_text(a, rubric_label, url, channel_url, submit_url):
+    """Будова поста за brand/BRAND.md, розділ 9. url – стаття на сайті (порожньо, якщо пост тільки для Telegram)."""
     e = html.escape
     label = "ТЕРМІНОВО" if a.get("urgent") else rubric_label
     src = a["sources"][0] if a["sources"] else None
     parts = [e(label), f"<b>{e(a['title'])}</b>", *[e(p) for p in a["telegram"]]]
+    lines = []
     if src:
-        parts.append(f'Джерело: <a href="{e(src["url"])}">{e(src["title"])}</a>' if src.get("url")
+        lines.append(f'Джерело: <a href="{e(src["url"])}">{e(src["title"])}</a>' if src.get("url")
                      else f"Джерело: {e(src['title'])}")
-    sign = f'<a href="{e(url)}">Дзеркало влади</a>'
+    if url:
+        lines.append(f'<a href="{e(url)}">Читати повністю на сайті</a>')
+    if lines:
+        parts.append("\n".join(lines))
+    sign = f'<a href="{e(channel_url)}">Дзеркало влади</a>' if channel_url else "Дзеркало влади"
     if submit_url:
         sign += f' | <a href="{e(submit_url)}">Надіслати новину</a>'
     parts.append(sign)

@@ -5,7 +5,7 @@ compatibility_date = "2025-09-01"
 workers_dev = false
 
 [triggers]
-crons = ["2 5-19 * * *"]   # щогодини в UTC; покриває 08–21 за Києвом і влітку, і взимку
+crons = ["2 4-20 * * *"]   # щогодини в UTC; покриває 07–22 за Києвом і влітку, і взимку
 
 [vars]
 REPO = "nikolfedorchenko-sys/dzerkalo-vlady"

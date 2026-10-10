@@ -75,6 +75,9 @@ def fetch_telegram(src, since):
         if len(text) < 60:  # голі репости й підписи до фото без змісту
             continue
         links = [a["href"] for a in body.select("a[href]") if a["href"].startswith("http")]
+        # Фото з допису (Telegram віддає його як фон-картинку)
+        photo = msg.select_one(".tgme_widget_message_photo_wrap[style]")
+        m = re.search(r"url\('([^']+)'\)", photo["style"]) if photo else None
         first_line = text.split("\n", 1)[0]
         items.append({
             "key": _key("tg:" + post),
@@ -84,6 +87,7 @@ def fetch_telegram(src, since):
             "summary": re.sub(r"\s+", " ", text)[:500],
             "full_text": text[:6000],
             "links": links[:5],
+            "image": m.group(1) if m else "",
             "url": f"https://t.me/{post}",
             "published": (when or datetime.now(timezone.utc)).isoformat(),
         })
@@ -105,6 +109,26 @@ def collect(sources, hours):
     return items, errors
 
 
+def download_photo(url, path, min_w=900):
+    """Завантажує фото з офіційного джерела; відкидає дрібні картинки й логотипи. Повертає True, якщо годиться."""
+    from io import BytesIO
+    from PIL import Image
+    try:
+        r = requests.get(url, headers=UA, timeout=TIMEOUT)
+        r.raise_for_status()
+        img = Image.open(BytesIO(r.content)).convert("RGB")
+    except Exception as e:  # noqa: BLE001
+        log.info("Фото з джерела не підійшло (%s): %s", url, e)
+        return False
+    w, h = img.size
+    if w < min_w or not 1.2 <= w / h <= 2.4:  # логотипи й квадратні заглушки – не фото події
+        log.info("Фото з джерела не підійшло: %dx%d", w, h)
+        return False
+    img.thumbnail((1600, 1600))
+    img.save(path, "JPEG", quality=85, optimize=True)
+    return True
+
+
 def full_text(item):
     """Повний текст матеріалу, щоб Claude писав пост з першоджерела, а не з заголовка."""
     if item.get("full_text"):
@@ -113,6 +137,10 @@ def full_text(item):
         r = requests.get(item["url"], headers=UA, timeout=TIMEOUT)
         r.raise_for_status()
         text = trafilatura.extract(r.text, url=item["url"], include_comments=False) or ""
+        if item.get("kind") == "official" and not item.get("image"):
+            og = BeautifulSoup(r.text, "html.parser").select_one('meta[property="og:image"][content]')
+            if og:
+                item["image"] = requests.compat.urljoin(item["url"], og["content"])
     except Exception as e:  # noqa: BLE001
         log.warning("Не вдалося відкрити %s: %s", item["url"], e)
         text = ""
