@@ -37,5 +37,5 @@
 
 ## Стек
 - Статичний сайт (HTML, CSS, трохи JS), новини в `data/news.json`.
-- Код у приватному репозиторії GitHub (nikolfedorchenko-sys), викладка на Cloudflare Pages.
+- Код у ПУБЛІЧНОМУ репозиторії GitHub (nikolfedorchenko-sys/dzerkalo-vlady, відкрито 10.10.2026 заради безлімітних хвилин GitHub Actions), викладка на Cloudflare Pages. Секрети – тільки в GitHub Secrets і autopost/.env, ніколи в коді.
 - Власник проєкту не програміст: пояснюй кроки простими словами, команди давай готовими до копіювання.
