@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dzerkalo-vlady.com/sitemap.xml
