@@ -87,6 +87,12 @@
     return many;
   }
 
+  /* «Терміново» діє, доки не настав час urgentUntil (якщо він вказаний) – тоді червоний рядок зникає сам. */
+  function isUrgent(n) {
+    if (!n.urgent) return false;
+    return !n.urgentUntil || new Date() < parseDate(n.urgentUntil).d;
+  }
+
   function credit(p) {
     if (!p) return '';
     return 'Фото: ' + [p.author, p.license].filter(Boolean).join(', ');
@@ -220,7 +226,7 @@
     var feed = news.filter(function (n) { return n !== hero; }).slice(0, 6);
     feedEl.innerHTML = feed.map(function (n) {
       return '<a class="feed__item" href="' + articleUrl(n) + '"><span class="feed__time">' + fmtFeed(n) + '</span>' +
-        '<span class="feed__title">' + (n.urgent ? '<span class="urgent-word">Терміново.</span> ' : '') + esc(n.title) + '</span></a>';
+        '<span class="feed__title">' + (isUrgent(n) ? '<span class="urgent-word">Терміново.</span> ' : '') + esc(n.title) + '</span></a>';
     }).join('');
     var note = $('#feed-note');
     if (data.feedNote) note.textContent = data.feedNote; else note.hidden = true;
@@ -307,8 +313,8 @@
     related = related.slice(0, 3);
 
     main.innerHTML = '<article class="article">' +
-      (k ? '<div>' + (n.urgent ? '<span class="urgent__tag">Терміново</span> ' : '') + (n.rubric ? '<a class="label" href="' + rubricUrl(n.rubric) + '">' + esc(k) + '</a>' : '<span class="label">' + esc(k) + '</span>') + '</div>'
-         : (n.urgent ? '<div><span class="urgent__tag">Терміново</span></div>' : '')) +
+      (k ? '<div>' + (isUrgent(n) ? '<span class="urgent__tag">Терміново</span> ' : '') + (n.rubric ? '<a class="label" href="' + rubricUrl(n.rubric) + '">' + esc(k) + '</a>' : '<span class="label">' + esc(k) + '</span>') + '</div>'
+         : (isUrgent(n) ? '<div><span class="urgent__tag">Терміново</span></div>' : '')) +
       '<h1 class="article__title">' + esc(n.title) + '</h1>' +
       (n.lead ? '<p class="article__lead">' + inline(n.lead) + '</p>' : '') +
       '<div class="article__bar"><div class="meta">' + (n.author ? '<strong>' + esc(n.author) + '</strong> · ' : '') + fmtLong(n) + ' · ' + readMinutes(n) + ' хв читання</div>' +
@@ -392,7 +398,7 @@
         raw.forEach(function (n) { n._d = parseDate(n.date); });
         var news = raw.slice().sort(function (a, b) { return b._d.d - a._d.d; });
 
-        var urgent = news.filter(function (n) { return n.urgent; })[0];
+        var urgent = news.filter(isUrgent)[0];
         if (urgent) $('#main').insertAdjacentHTML('afterbegin', urgentHTML(urgent));
 
         if (page === 'home') renderHome(news, raw, data);
