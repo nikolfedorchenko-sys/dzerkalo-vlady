@@ -12,8 +12,10 @@ limits:
   max_items_for_triage: 80  # скільки свіжих матеріалів за раз показувати Claude
   # Telegram: короткі пости про все варте уваги
   min_importance: 5         # у Telegram – сюжети з оцінкою від 5 з 10
-  max_posts_per_run: 3      # не більше постів за один запуск
-  max_posts_per_day: 20     # не більше постів у Telegram за добу (з 00:00 за Києвом)
+  max_posts_per_run: 4      # не більше новин за один запуск (щогодини)
+  max_posts_per_day: 40     # не більше постів у Telegram за добу (з 00:00 за Києвом)
+  # Facebook: усі новини; у межах запуску – з кроком у стільки хвилин (Facebook публікує за розкладом сам)
+  fb_interval_minutes: 15
   # Сайт і Facebook: тільки найважливіше, з розгорнутою статтею й колонкою
   site_min_importance: 7    # на сайт і у Facebook – від 7 з 10
   site_max_per_day: 8       # не більше матеріалів на сайті й у Facebook за добу

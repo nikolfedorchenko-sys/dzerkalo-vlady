@@ -55,7 +55,7 @@ WRITE_TASK = f"""Напиши матеріал ДВ про сюжет нижче
 - id: коротка адреса латиницею через дефіс (транслітерація заголовка), 3–6 слів, без дат.
 - rubric: одна з: {{rubrics}}.
 - card_title: заголовок для картинки-картки, до 70 знаків.
-- sources: джерела, на які спирається текст: назва органу чи медіа (наприклад «Верховна Рада», «Суспільне») і посилання – тільки з наданого списку. Першоджерело влади – першим.
+- sources: тільки офіційні джерела влади з наданого списку (сайти й канали органів влади, позначені official) – назва органу й посилання. Медіа сюди не включай ніколи. Якщо офіційного джерела немає – порожній список.
 - urgent: true тільки якщо рішення вже ухвалено або подія відбувається зараз.
 {PHOTO_THEMES}
 
@@ -263,20 +263,24 @@ SHORT_TASK = f"""Напиши короткий пост ДВ для Telegram п�
 - rubric: одна з: {{rubrics}}.
 - title: заголовок до 80 знаків, одна думка.
 - card_title: заголовок для картинки-картки, до 70 знаків.
-- sources: назва органу чи медіа і посилання – тільки з наданого списку, першоджерело влади – першим.
+- sources: тільки офіційні джерела влади з наданого списку (сайти й канали органів влади, позначені official) – назва органу й посилання. Медіа сюди не включай ніколи. Якщо офіційного джерела немає – порожній список.
 - urgent: true тільки якщо рішення вже ухвалено або подія відбувається зараз.
 {PHOTO_THEMES}
 
 TELEGRAM
-{rule("telegram")}"""
+{rule("telegram")}
+
+FACEBOOK
+{rule("facebook")}
+Для цього поста facebook коротший: 500–900 знаків, за тими ж правилами."""
 
 SHORT_SCHEMA = {
     "type": "object",
     "properties": {k: ARTICLE_SCHEMA["properties"][k]
                    for k in ("id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt",
-                             "telegram", "sources", "urgent")},
+                             "telegram", "facebook", "sources", "urgent")},
     "required": ["id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt",
-                 "telegram", "sources", "urgent"],
+                 "telegram", "facebook", "sources", "urgent"],
     "additionalProperties": False,
 }
 

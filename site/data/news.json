@@ -3,7 +3,7 @@
   "numberOfDay": {
     "value": "12–15 хв",
     "text": "Приблизно стільки, за даними КМДА, доводиться чекати потяга на «червоній» і «зеленій» лініях після відновлення руху.",
-    "note": "10 жовтня · Джерело: КМДА",
+    "note": "10 жовтня",
     "autoDate": "2026-10-10",
     "importance": 8
   },
@@ -40,14 +40,6 @@
         {
           "title": "КМДА",
           "url": "https://t.me/KyivCityOfficial/21577"
-        },
-        {
-          "title": "Суспільне Київ",
-          "url": "https://t.me/suspilne_kyiv/29865"
-        },
-        {
-          "title": "Укрінформ",
-          "url": "https://www.ukrinform.ua/rubric-regions/4173016-interval-ruhu-potagiv-u-stolicnomu-metro-postupovo-skorocuetsa-kmva.html"
         }
       ],
       "auto": true,
@@ -87,18 +79,6 @@
         {
           "title": "КМДА",
           "url": "https://t.me/KyivCityOfficial/21578"
-        },
-        {
-          "title": "Суспільне Київ",
-          "url": "https://t.me/suspilne_kyiv/29866"
-        },
-        {
-          "title": "Суспільне",
-          "url": "https://suspilne.media/kyiv/1424251-u-kievi-stabilizuetsa-vodopostacanna-kmda/"
-        },
-        {
-          "title": "Укрінформ",
-          "url": "https://www.ukrinform.ua/rubric-regions/4173021-vodopostacanna-pravobereznoi-castini-stolici-postupovo-vidnovluetsa-kmva.html"
         }
       ],
       "auto": true,

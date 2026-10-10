@@ -90,11 +90,10 @@ def update_number_of_day(data, drafts, now_local):
     # Нова цифра – якщо сьогодні ще не оновлювали, або сьогоднішня слабша за новий сюжет
     if current.get("autoDate") == today and current.get("importance", 0) >= best["_story"]["importance"]:
         return False
-    src = best["sources"][0]["title"] if best["sources"] else ""
     data["numberOfDay"] = {
         "value": best["number"]["value"],
         "text": best["number"]["text"],
-        "note": f"{now_local.day} {MONTHS[now_local.month - 1]}" + (f" · Джерело: {src}" if src else ""),
+        "note": f"{now_local.day} {MONTHS[now_local.month - 1]}",
         "autoDate": today,
         "importance": best["_story"]["importance"],
     }
@@ -168,12 +167,8 @@ def telegram_text(a, rubric_label, url, channel_url, submit_url):
     """Будова поста за brand/BRAND.md, розділ 9. url – стаття на сайті (порожньо, якщо пост тільки для Telegram)."""
     e = html.escape
     label = "ТЕРМІНОВО" if a.get("urgent") else rubric_label
-    src = a["sources"][0] if a["sources"] else None
     parts = [e(label), f"<b>{e(a['title'])}</b>", *[e(p) for p in a["telegram"]]]
-    lines = []
-    if src:
-        lines.append(f'Джерело: <a href="{e(src["url"])}">{e(src["title"])}</a>' if src.get("url")
-                     else f"Джерело: {e(src['title'])}")
+    lines = []  # рядок «Джерело» не ставимо – не рекламуємо інші медіа
     if url:
         lines.append(f'<a href="{e(url)}">Читати повністю на сайті</a>')
     if lines:
@@ -208,11 +203,16 @@ def notify(token, chat_id, text):
 
 # ---------- Facebook ----------
 
-def send_facebook(page_id, token, a, url, card_path):
-    message = f"{a['facebook']}\n\nПовністю на сайті: {url}"
+def send_facebook(page_id, token, a, url, card_path, channel_url="", at=None):
+    """Пост із карткою. url – стаття на сайті (для повних матеріалів); at – час публікації за розкладом
+    (unix-час, щонайменше на 10 хв уперед), інакше – одразу."""
+    tail = f"Повністю на сайті: {url}" if url else (f"Більше новин – у Telegram: {channel_url}" if channel_url else "")
+    message = a["facebook"] + (f"\n\n{tail}" if tail else "")
+    data = {"message": message, "access_token": token}
+    if at:
+        data.update({"published": "false", "scheduled_publish_time": str(int(at))})
     with open(card_path, "rb") as f:
-        r = requests.post(f"{FB_API}/{page_id}/photos", timeout=120,
-                          data={"message": message, "access_token": token}, files={"source": f})
+        r = requests.post(f"{FB_API}/{page_id}/photos", timeout=120, data=data, files={"source": f})
     data = r.json()
     if "error" in data:
         raise RuntimeError(f"Facebook: {data['error'].get('message')}")

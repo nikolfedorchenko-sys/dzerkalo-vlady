@@ -64,9 +64,11 @@ def fix_dashes(obj):
 
 def check_draft(a, texts):
     """Механічні перевірки, які не варто довіряти моделі."""
-    allowed = {t["url"] for t in texts} | {l for t in texts for l in t.get("links", [])}
-    a["sources"] = [s for s in a["sources"] if s.get("url") in allowed] or [
-        {"title": t["source"], "url": t["url"]} for t in texts[:2]]
+    # Джерела – тільки офіційні (органи влади); медіа-конкурентів не згадуємо й не посилаємося
+    official = [t for t in texts if t.get("kind") == "official"]
+    allowed = {t["url"] for t in official} | {l for t in official for l in t.get("links", [])}
+    a["sources"] = [s for s in a.get("sources", []) if s.get("url") in allowed] or [
+        {"title": t["source"], "url": t["url"]} for t in official[:2]]
     problems = []
     if len(a["title"]) > 100:
         problems.append("заголовок задовгий")
@@ -244,10 +246,11 @@ def main():
         drafts = [publish.site_entry(a, a["id"], date) for a in full]
         (OUT / "drafts.json").write_text(json.dumps(drafts, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    fb_n = 0
     for a in published:
         url = publish.article_url(a["id"]) if a["_full"] else ""
         label = brain.RUBRICS.get(a["rubric"], "")
-        src_title = a["sources"][0]["title"] if a["sources"] else ""
+        src_title = ""  # рядок «Джерело» на картці не друкуємо
         card_path = card.render_photo(OUT / f"{a['id']}.jpg", a["_photo"]["path"], label,
                                       a["card_title"] or a["title"], src_title, photos.credit(a["_photo"]),
                                       urgent=a.get("urgent", False))
@@ -269,10 +272,14 @@ def main():
                     report.append(f"Telegram не прийняв пост: {escape(str(e))}")
             if mode == "live" and a["_full"]:
                 where.append("сайт")
+            if mode == "live" and a.get("facebook"):
                 if fb_page and fb_token:
                     try:
-                        publish.send_facebook(fb_page, fb_token, a, url, card_path)
-                        where.append("Facebook")
+                        # Facebook: перший пост одразу, наступні – з кроком fb_interval_minutes (розклад Facebook)
+                        at = None if not fb_n else now.timestamp() + fb_n * lim["fb_interval_minutes"] * 60
+                        publish.send_facebook(fb_page, fb_token, a, url, card_path, cfg.get("channel_url"), at)
+                        where.append("Facebook" + (f" о {datetime.fromtimestamp(at, KYIV):%H:%M}" if at else ""))
+                        fb_n += 1
                     except Exception as e:  # noqa: BLE001
                         report.append(f"Facebook не прийняв пост: {escape(str(e))}")
         state["published"].append({"at": now.isoformat(), "id": a["id"], "title": a["title"], "mode": mode,
