@@ -76,6 +76,23 @@ def check_draft(a, texts):
     return problems
 
 
+def facebook_check(cfg):
+    """Кнопка «Перевірити Facebook»: публікує на сторінці останню автоматичну новину з сайту."""
+    page, token = os.environ.get("FB_PAGE_ID", ""), os.environ.get("FB_PAGE_TOKEN", "")
+    if not (page and token):
+        sys.exit("Немає FB_PAGE_ID або FB_PAGE_TOKEN")
+    n = next((x for x in publish.load_news()["news"] if x.get("auto")), None)
+    if not n:
+        sys.exit("На сайті ще немає автоматичних новин – нічого перевіряти")
+    OUT.mkdir(exist_ok=True)
+    src = n["sources"][0]["title"] if n.get("sources") else ""
+    card_path = card.render(OUT / f"{n['id']}.png", brain.RUBRICS.get(n["rubric"], ""), n["title"], src,
+                            urgent=n.get("urgent", False))
+    a = {"title": n["title"], "facebook": n["lead"] + "\n\n" + n["impact"]["text"]}
+    res = publish.send_facebook(page, token, a, publish.article_url(n["id"]), card_path)
+    log.info("Facebook: опубліковано «%s» (%s)", n["title"], res.get("post_id") or res.get("id"))
+
+
 def main():
     load_env()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
@@ -86,6 +103,8 @@ def main():
     lim = cfg["limits"]
     now = datetime.now(timezone.utc)
     now_local = now.astimezone(KYIV)
+    if os.environ.get("DV_ACTION") == "facebook-check":
+        return facebook_check(cfg)
     log.info("Режим: %s, модель: %s, доступ: %s", mode, brain.MODEL, brain.engine())
     if not brain.engine():
         log.warning("Немає CLAUDE_CODE_OAUTH_TOKEN (чи ANTHROPIC_API_KEY) – автопостинг ще не налаштовано")

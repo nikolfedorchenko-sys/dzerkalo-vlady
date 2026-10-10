@@ -6,6 +6,14 @@ on:
   schedule:
     - cron: "5 4-19 * * *"   # UTC; влітку це 07:05–22:05 за Києвом, узимку 06:05–21:05
   workflow_dispatch:          # кнопка «Run workflow» – запустити вручну
+    inputs:
+      action:
+        description: "Що зробити"
+        type: choice
+        default: "Звичайний запуск"
+        options:
+          - "Звичайний запуск"
+          - "Перевірити Facebook"
 
 concurrency:
   group: autopost
@@ -42,6 +50,7 @@ jobs:
       - name: Запуск
         env:
           DV_MODE: ${{ vars.DV_MODE || 'test' }}
+          DV_ACTION: ${{ inputs.action == 'Перевірити Facebook' && 'facebook-check' || '' }}
           DV_MODEL: ${{ vars.DV_MODEL }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}   # підписка Max
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}               # запасний варіант: платний API

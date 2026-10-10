@@ -19,7 +19,7 @@
 - Новини сайту лежать у `../site/data/news.json` (будову полів описано в `../САЙТ.md`). Цей файл можна брати як джерело для постів.
 - Сайт: https://dzerkalo-vlady.pages.dev/ (скоро – https://dzerkalo-vlady.com). Посилання на статтю: `/article?id=<id новини>`.
 - Telegram-канал: @dzerkalo_vlady (дубль – @dzerkalovlady).
-- Facebook: https://www.facebook.com/profile.php?id=61594918035993 (FB_PAGE_ID = 61594918035993, якщо це сторінка, а не особистий профіль).
+- Facebook: https://www.facebook.com/profile.php?id=61594918035993 – це сторінка; для API її номер інший: FB_PAGE_ID = 1415145338342034. Застосунок Meta «DV Autopost» (1075325835271963), постійний токен сторінки – секрет FB_PAGE_TOKEN.
 
 ## Правила
 - **Секрети (токени ботів, ключі API) – ніколи в git.** Тримай їх у `autopost/.env` чи інших файлах з `autopost/.gitignore`. Репозиторій приватний, але секретам там однаково не місце.

@@ -15,7 +15,7 @@ log = logging.getLogger("dv")
 ROOT = Path(__file__).resolve().parent.parent
 NEWS = ROOT / "site" / "data" / "news.json"
 SITE_URL = os.environ.get("DV_SITE_URL", "https://dzerkalo-vlady.com").rstrip("/")
-FB_API = "https://graph.facebook.com/v23.0"
+FB_API = "https://graph.facebook.com/v26.0"
 
 
 def article_url(news_id):
