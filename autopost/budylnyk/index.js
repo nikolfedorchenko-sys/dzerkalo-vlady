@@ -20,6 +20,19 @@ export default {
         headers: { "content-type": "text/plain; charset=utf-8" },
       });
     }
+    // Діагностика: який бот підключено і чи доходять до нього повідомлення (токен не показується)
+    if (request.method === "GET" && url.pathname === "/status") {
+      const me = await tg(env, "getMe", {});
+      const hook = await tg(env, "getWebhookInfo", {});
+      const h = hook.result || {};
+      const info = {
+        bot: me.result ? `@${me.result.username}` : me.description,
+        webhook: h.url ? h.url.replace(/^https:\/\/[^/]+/, "…") : "не підключено",
+        pending: h.pending_update_count,
+        last_error: h.last_error_message || "немає",
+      };
+      return new Response(JSON.stringify(info, null, 1), { headers: { "content-type": "application/json; charset=utf-8" } });
+    }
     if (request.method === "POST" && url.pathname === "/telegram") {
       if (request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== (await hookSecret(env))) {
         return new Response("forbidden", { status: 403 });
@@ -41,8 +54,6 @@ const THANKS = "Дякуємо! Редакція отримала ваше по�
 
 async function onMessage(env, msg) {
   if (!msg || !msg.chat || msg.chat.type !== "private") return;
-  const fromAdmin = String(msg.chat.id) === String(env.ADMIN_CHAT);
-  if (fromAdmin) return; // власні повідомлення редакції не пересилаємо
   if (msg.text && msg.text.startsWith("/start")) {
     await tg(env, "sendMessage", { chat_id: msg.chat.id, text: WELCOME });
     return;

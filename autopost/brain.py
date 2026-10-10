@@ -41,7 +41,12 @@ def rule(name):
 
 
 BRAND = rule("голос")
-PHOTO_THEMES = "- photo_theme: тема фото для картки, одна з: " + "; ".join(f"{k} ({v})" for k, v in photos.THEMES.items()) + "."
+PHOTO_THEMES = ("- photo_query: запит англійською (2–5 слів) для пошуку фото на Wikimedia Commons, яке прямо показує предмет новини: "
+                "конкретне місце, будівлю, об'єкт чи подію (напр. «Kyiv Metro train», «Verkhovna Rada session hall», "
+                "«Kyiv thermal power plant», «Kyiv apartment block damaged»). Не абстракції й не імена людей.\n"
+                "- photo_query_alt: запасний запит, ширший (напр. «Kyiv metro», «Ukraine power line»).\n"
+                "- photo_theme: тема фото на випадок, якщо пошук нічого не дасть, одна з: "
+                + "; ".join(f"{k} ({v})" for k, v in photos.THEMES.items()) + ".")
 TRIAGE_TASK = rule("відбір")
 REVIEW_TASK = rule("перевірка")
 WRITE_TASK = f"""Напиши матеріал ДВ про сюжет нижче, спираючись тільки на тексти джерел. Один сюжет – три тексти: сайт, Telegram, Facebook.
@@ -126,8 +131,10 @@ ARTICLE_SCHEMA = {
         },
         "urgent": {"type": "boolean"},
         "photo_theme": {"type": "string", "enum": list(photos.THEMES)},
+        "photo_query": STR,
+        "photo_query_alt": STR,
     },
-    "required": ["id", "rubric", "title", "card_title", "photo_theme", "lead", "facts", "quote", "context", "number", "impact",
+    "required": ["id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt", "lead", "facts", "quote", "context", "number", "impact",
                  "next", "opinion", "telegram", "facebook", "sources", "urgent"],
     "additionalProperties": False,
 }
@@ -266,8 +273,10 @@ TELEGRAM
 SHORT_SCHEMA = {
     "type": "object",
     "properties": {k: ARTICLE_SCHEMA["properties"][k]
-                   for k in ("id", "rubric", "title", "card_title", "photo_theme", "telegram", "sources", "urgent")},
-    "required": ["id", "rubric", "title", "card_title", "photo_theme", "telegram", "sources", "urgent"],
+                   for k in ("id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt",
+                             "telegram", "sources", "urgent")},
+    "required": ["id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt",
+                 "telegram", "sources", "urgent"],
     "additionalProperties": False,
 }
 
