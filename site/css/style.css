@@ -38,6 +38,8 @@
 }
 
 /* ---------- основа ---------- */
+body.is-loading #main, body.is-loading .footer { visibility: hidden; }
+body.is-loading #main { min-height: 100vh; }
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-padding-top: 100px; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 16px; line-height: 1.6; overflow-x: hidden; }

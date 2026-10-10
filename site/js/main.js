@@ -97,6 +97,17 @@
     if (!p) return '';
     return 'Фото: ' + [p.author, p.license].filter(Boolean).join(', ');
   }
+  /* Фото: на телефон – NAME-640.webp, на комп'ютер – NAME-1280.webp (їх робить tools/optimize_photos.py).
+     Якщо полегшених версій немає, браузер бере оригінал (onerror). */
+  function imgAttrs(p, sizes) {
+    var f = String(p.file || '');
+    var m = f.match(/^(.*)\.(jpe?g|png)$/i);
+    if (!m) return ' src="' + esc(f) + '"';
+    var b = esc(m[1]);
+    return ' src="' + b + '-1280.webp" srcset="' + b + '-640.webp 640w, ' + b + '-1280.webp 1280w" sizes="' + sizes + '"' +
+      ' onerror="this.onerror=null;this.removeAttribute(\'srcset\');this.src=\'' + esc(f) + '\'"';
+  }
+
   /* Яку частину фото показувати при обрізці: photo.position, напр. "50% 25%". */
   function pos(p) { return p && p.position ? ' style="object-position: ' + esc(p.position) + '"' : ''; }
   function kicker(n) { return n.kicker || rubricName(n.rubric); }
@@ -176,7 +187,7 @@
   function cardHTML(n, opts) {
     opts = opts || {};
     var p = n.photo;
-    var img = p && p.file ? '<a class="card__img" href="' + articleUrl(n) + '" tabindex="-1" aria-hidden="true"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" loading="lazy" width="600" height="400"' + pos(p) + '></a>' : '';
+    var img = p && p.file ? '<a class="card__img" href="' + articleUrl(n) + '" tabindex="-1" aria-hidden="true"><img' + imgAttrs(p, '(max-width: 600px) 100vw, 400px') + ' alt="' + esc(p.alt) + '" loading="lazy" decoding="async" width="600" height="400"' + pos(p) + '></a>' : '';
     var k = kicker(n);
     var label = k ? (n.rubric ? '<a class="label" href="' + rubricUrl(n.rubric) + '">' + esc(k) + '</a>' : '<span class="label">' + esc(k) + '</span>') : '';
     var extra = '';
@@ -205,7 +216,7 @@
 
     if (hero) {
       var p = hero.photo;
-      var fig = p && p.file ? '<figure class="hero__fig"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" width="1200" height="800" fetchpriority="high"' + pos(p) + '><figcaption class="photo-credit">' + esc(credit(p)) + '</figcaption></figure>' : '';
+      var fig = p && p.file ? '<figure class="hero__fig"><img' + imgAttrs(p, '(max-width: 900px) 100vw, 860px') + ' alt="' + esc(p.alt) + '" width="1200" height="800" fetchpriority="high"' + pos(p) + '><figcaption class="photo-credit">' + esc(credit(p)) + '</figcaption></figure>' : '';
       /* Коротка назва джерела – до двокрапки: «AFP / France 24: Київ…» → «AFP / France 24». */
       var src = hero.sources && hero.sources[0] ? ' · Джерело: ' + esc(String(hero.sources[0].title).split(':')[0]) : '';
       heroEl.innerHTML = fig + '<div class="hero__body">' +
@@ -304,7 +315,7 @@
     setActiveNav(n.rubric);
     var p = n.photo, k = kicker(n);
     var shareUrl = encodeURIComponent(location.href);
-    var fig = p && p.file ? '<figure class="article__fig"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" width="1200" height="675"' + pos(p) + '>' +
+    var fig = p && p.file ? '<figure class="article__fig"><img' + imgAttrs(p, '(max-width: 800px) 100vw, 760px') + ' alt="' + esc(p.alt) + '" width="1200" height="675" fetchpriority="high"' + pos(p) + '>' +
       '<figcaption>' + (p.caption ? esc(p.caption) + '. ' : '') + esc(credit(p)) + '</figcaption></figure>' : '';
 
     var related = news.filter(function (x) { return x !== n && n.rubric && x.rubric === n.rubric; });
@@ -385,13 +396,17 @@
   }
 
   /* ---------- запуск ---------- */
+  /* Поки дані не підвантажились, вміст сторінки прихований (body.is-loading) – так блоки не «стрибають». */
+  function loaded() { document.body.classList.remove('is-loading'); }
+
   function init() {
     var page = document.body.getAttribute('data-page');
     $('#site-header').innerHTML = headerHTML();
     $('#site-footer').innerHTML = footerHTML();
     initHeader();
+    setTimeout(loaded, 4000); // запобіжник, якщо дані вантажаться надто довго
 
-    fetch('data/news.json', { cache: 'no-cache' })
+    fetch('data/news.json')
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (data) {
         var raw = (data.news || []).filter(function (n) { return n && n.id && n.title; });
@@ -405,6 +420,7 @@
         else if (page === 'article') renderArticle(news);
         else if (page === 'rubric') renderRubric(news);
       })
+      .then(loaded, function (e) { loaded(); throw e; })
       .catch(function () {
         var target = $('#hero') || $('#article') || $('#rubric');
         if (target) notice(target, '<strong>Не вдалося завантажити новини.</strong> Якщо ви відкрили файл подвійним клацанням, запустіть сайт через локальний сервер (інструкція – у файлі САЙТ.md).');

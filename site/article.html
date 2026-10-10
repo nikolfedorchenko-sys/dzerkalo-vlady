@@ -18,10 +18,12 @@
 <link rel="apple-touch-icon" href="assets/logos/dv-avatar-640.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,600;7..72,700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap"></noscript>
+<link rel="preload" href="data/news.json" as="fetch" crossorigin>
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-page="article">
+<body data-page="article" class="is-loading">
 <a class="skip" href="#main">Перейти до змісту</a>
 <div class="site-header" id="site-header"></div>
 
@@ -30,6 +32,6 @@
 </main>
 
 <footer class="footer" id="site-footer"></footer>
-<script src="js/main.js"></script>
+<script src="js/main.js" defer></script>
 </body>
 </html>
