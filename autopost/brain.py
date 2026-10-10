@@ -191,8 +191,10 @@ def _ask_max(task, content, schema, effort):
         raise RuntimeError(f"Claude Code: {msg}")
     if out.get("stop_reason") == "refusal":
         raise Refused("модель відмовилася обробляти цей матеріал")
-    log.info("Claude (Max): %s", {k: v for k, v in (out.get("usage") or {}).items()
-                                  if k in ("input_tokens", "output_tokens")})
+    u = out.get("usage") or {}
+    log.info("Claude (Max): вх. %s (+кеш %s/%s), вих. %s токенів, %.0f с",
+             u.get("input_tokens"), u.get("cache_creation_input_tokens"), u.get("cache_read_input_tokens"),
+             u.get("output_tokens"), (out.get("duration_ms") or 0) / 1000)
     if isinstance(out.get("structured_output"), dict):
         return out["structured_output"]
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", str(out.get("result", "")).strip())
@@ -231,7 +233,7 @@ def triage(items, recent_titles):
              for i, it in enumerate(items)]
     recent = "\n".join(f"- {t}" for t in recent_titles) or "- (поки нічого)"
     content = f"Ми вже опублікували за останні дні:\n{recent}\n\nСвіжі матеріали:\n\n" + "\n\n".join(lines)
-    return _ask(TRIAGE_TASK, content, TRIAGE_SCHEMA, "low")["stories"]
+    return _ask(TRIAGE_TASK, content, TRIAGE_SCHEMA, "medium")["stories"]
 
 
 def _sources_block(texts):

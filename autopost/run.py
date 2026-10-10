@@ -129,6 +129,9 @@ def main():
             return
         for it in fresh:
             state["seen"][it["key"]] = now.isoformat()
+        for s in stories:
+            log.info("  сюжет %2d/10%s: %s (%s)", s["importance"], " ТЕРМІНОВО" if s["urgent"] else "",
+                     s["topic"], s["rubric"])
         stories = [s for s in stories if s["importance"] >= lim["min_importance"] and s["items"]]
         stories.sort(key=lambda s: (-s["urgent"], -s["importance"]))
         log.info("Сюжетів для публікації: %d", len(stories))
