@@ -42,8 +42,8 @@ skip_words:
   - серіал
   - кінопрем
 
-# Посилання «Надіслати новину» в підписі Telegram-поста
-submit_url: "https://t.me/dzerkalo_vlady"
+# «Надіслати новину» – бот, що пересилає новини від читачів редакції (autopost/budylnyk)
+submit_url: "https://t.me/dzerkalo_vlady_news_bot"
 
 sources:
   # --- Офіційні: влада ---
