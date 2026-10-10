@@ -1,0 +1,38 @@
+# Налаштування автопостингу «Дзеркало влади».
+# Додати джерело: скопіюйте рядок і змініть назву та адресу.
+#   RSS:      - { name: "Назва", url: "https://…/rss", kind: media }
+#   Telegram: - { name: "Назва", channel: "імʼя_каналу_без_@", kind: official }
+# kind: official – органи влади (першоджерело), media – медіа.
+
+limits:
+  window_hours: 12          # брати матеріали не старші за стільки годин
+  max_items_for_triage: 120 # скільки свіжих матеріалів за раз показувати Claude
+  min_importance: 7         # публікуємо сюжети з оцінкою від 7 з 10
+  max_posts_per_run: 2      # не більше постів за один запуск (щогодини)
+  max_posts_per_day: 10     # не більше постів за добу
+  urgent_hours: 6           # через скільки годин знімати «Терміново» на сайті
+
+# Посилання «Надіслати новину» в підписі Telegram-поста
+submit_url: "https://t.me/dzerkalo_vlady"
+
+sources:
+  # --- Офіційні: влада ---
+  - { name: "Верховна Рада", url: "https://www.rada.gov.ua/rss/news/", kind: official }
+  - { name: "Верховна Рада (Telegram)", channel: "verkhovnaradaukrainy", kind: official }
+  - { name: "КМДА", channel: "KyivCityOfficial", kind: official }
+  - { name: "Віталій Кличко", channel: "vitaliy_klitschko", kind: official }
+  - { name: "Офіс Президента", channel: "OP_UA", kind: official }
+  - { name: "Володимир Зеленський", channel: "V_Zelenskiy_official", kind: official }
+  - { name: "НБУ", channel: "nbu_ua", kind: official }
+
+  # --- Медіа ---
+  - { name: "Слово і Діло", channel: "slovo_i_dilo", kind: media }
+  - { name: "Київ Влада", url: "https://kyivvlada.com.ua/rss", kind: media }
+  - { name: "Суспільне Київ", channel: "suspilne_kyiv", kind: media }
+  - { name: "Суспільне", url: "https://suspilne.media/rss/all.rss", kind: media }
+  - { name: "Українська правда", url: "https://www.pravda.com.ua/rss/view_news/", kind: media }
+  - { name: "Економічна правда", url: "https://www.epravda.com.ua/rss/", kind: media }
+  - { name: "Інтерфакс-Україна", url: "https://interfax.com.ua/news/general.rss", kind: media }
+  - { name: "Укрінформ", url: "https://www.ukrinform.ua/rss/block-lastnews", kind: media }
+  - { name: "LB.ua", url: "https://lb.ua/rss/ukr/news.xml", kind: media }
+  - { name: "Дзеркало тижня", url: "https://zn.ua/ukr/rss/full.rss", kind: media }

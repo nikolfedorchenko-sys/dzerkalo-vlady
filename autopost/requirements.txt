@@ -1,0 +1,8 @@
+anthropic>=0.116
+requests>=2.32
+feedparser>=6.0
+beautifulsoup4>=4.12
+trafilatura>=1.12
+pillow>=10.0
+pyyaml>=6.0
+tzdata

@@ -12,3 +12,7 @@ node_modules/
 __pycache__/
 .venv/
 *.log
+
+# Робочі файли автопостингу
+state/
+out/
