@@ -70,6 +70,16 @@ function withArticle(page, n) {
     .transform(page);
 }
 
+/* Полегшені фото, як у js/main.js: NAME-640.webp / NAME-1280.webp (tools/optimize_photos.py),
+   а якщо їх немає – оригінал. */
+function imgAttrs(file) {
+  const m = String(file || "").match(/^(.*)\.(jpe?g|png)$/i);
+  if (!m) return ' src="' + esc(file) + '"';
+  const b = esc(m[1]);
+  return ' src="' + b + '-1280.webp" srcset="' + b + "-640.webp 640w, " + b + '-1280.webp 1280w" sizes="(max-width: 800px) 100vw, 760px"' +
+    " onerror=\"this.onerror=null;this.removeAttribute('srcset');this.src='" + esc(file) + "'\"";
+}
+
 /* Та сама розмітка, що малює js/main.js, тільки без кнопок – щоб сторінка не «стрибала». */
 function articleHTML(n) {
   const k = n.kicker || RUBRICS[n.rubric] || "";
@@ -80,7 +90,7 @@ function articleHTML(n) {
     '<h1 class="article__title">' + esc(n.title) + "</h1>" +
     (n.lead ? '<p class="article__lead">' + inline(n.lead) + "</p>" : "") +
     (n.author ? '<div class="article__bar"><div class="meta"><strong>' + esc(n.author) + "</strong></div></div>" : "") +
-    (p && p.file ? '<figure class="article__fig"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" width="1200" height="675">' +
+    (p && p.file ? '<figure class="article__fig"><img' + imgAttrs(p.file) + ' alt="' + esc(p.alt) + '" width="1200" height="675" fetchpriority="high">' +
       "<figcaption>" + (p.caption ? esc(p.caption) + ". " : "") + esc(credit) + "</figcaption></figure>" : "") +
     '<div class="prose">' + bodyHTML(n) + "</div></article>";
 }
