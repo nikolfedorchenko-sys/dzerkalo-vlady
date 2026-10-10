@@ -1,0 +1,263 @@
+# Фотобанк для карток і статей автопостингу. Фото лежать у site/assets/photos/.
+# theme – тема; author і license – обовʼязково, вони друкуються під фото.
+# Додати фото: покласти файл у site/assets/photos/bank/ і дописати рядок за зразком.
+- file: assets/photos/bank/rada-01.jpg
+  theme: rada
+  author: Wadco2 / Wikimedia Commons
+  license: CC BY-SA 3.0
+  source: https://commons.wikimedia.org/wiki/File:Polyakova_House_and_Verkhovna_Rada_-_Mykhaila_Hrushevskoho_Street,_Pechersk_Raion,_Kiev._-_Pechersk_937.jpg
+- file: assets/photos/bank/rada-02.jpg
+  theme: rada
+  author: Офіс Президента України / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:%D0%A3%D1%87%D0%B0%D1%81%D1%82%D1%8C_%D0%9F%D1%80%D0%B5%D0%B7%D0%B8%D0%B4%D0%B5%D0%BD%D1%82%D0%B0_%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D0%B8_%D1%83_%D0%BF%D0%BB%D0%B5%D0%BD%D0%B0%D1%80%D0%BD%D0%BE%D0%BC%D1%83_%D0%B7%D0%B0%D1%81%D1%96%D0%B4%D0%B0%D0%BD%D0%BD%D1%96_%D0%92%D0%B5%D1%80%D1%85%D0%BE%D0%B2%D0%BD%D0%BE%D1%97_%D0%A0%D0%B0%D0%B4%D0%B8_23.jpg
+- file: assets/photos/bank/rada-03.jpg
+  theme: rada
+  author: Офіс Президента України / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:%D0%A3%D1%87%D0%B0%D1%81%D1%82%D1%8C_%D0%9F%D1%80%D0%B5%D0%B7%D0%B8%D0%B4%D0%B5%D0%BD%D1%82%D0%B0_%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D0%B8_%D1%83_%D0%BF%D0%BB%D0%B5%D0%BD%D0%B0%D1%80%D0%BD%D0%BE%D0%BC%D1%83_%D0%B7%D0%B0%D1%81%D1%96%D0%B4%D0%B0%D0%BD%D0%BD%D1%96_%D0%92%D0%B5%D1%80%D1%85%D0%BE%D0%B2%D0%BD%D0%BE%D1%97_%D0%A0%D0%B0%D0%B4%D0%B8_18.jpg
+- file: assets/photos/bank/uriad-01.jpg
+  theme: uriad
+  author: Prymasal / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: https://commons.wikimedia.org/wiki/File:%D0%9A%D0%B8%D1%97%D0%B2,_%D0%91%D1%83%D0%B4%D0%B8%D0%BD%D0%BE%D0%BA_%D1%83%D1%80%D1%8F%D0%B4%D1%83_%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D0%B8.jpg
+- file: assets/photos/bank/ofis-01.jpg
+  theme: ofis
+  author: Сергій Криниця (Haidamac) / Wikimedia Commons
+  license: CC BY-SA 3.0
+  source: https://commons.wikimedia.org/wiki/File:Kyiv_Bankova_11_SAM_1982_80-382-0015.jpg
+- file: assets/photos/bank/ofis-02.jpg
+  theme: ofis
+  author: Офіс Президента України / Wikimedia Commons
+  license: CC0
+  source: https://commons.wikimedia.org/wiki/File:Signals_from_the_negotiations_can_be_called_positive,_but_they_do_not_silence_the_explosion_of_Russian_shells_-_address_by_the_President_of_Ukraine._(51970269660).jpg
+- file: assets/photos/bank/energy-01.jpg
+  theme: energy
+  author: ДСНС України / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:Trypilska_Thermal_Power_Plant_after_Russian_attack,_2024-04-11_(07).webp
+- file: assets/photos/bank/bezpeka-01.jpg
+  theme: bezpeka
+  author: ДСНС України / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:Trypilska_Thermal_Power_Plant_after_Russian_attack,_2024-04-11_(17).webp
+- file: assets/photos/bank/bezpeka-02.jpg
+  theme: bezpeka
+  author: ДСНС України / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:Trypilska_Thermal_Power_Plant_after_Russian_attack,_2024-04-11_(30).webp
+- file: assets/photos/bank/energy-02.jpg
+  theme: energy
+  author: Novoklimov / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:Crossing_electricity_pylon_330_kV_09.jpg
+- file: assets/photos/bank/energy-03.jpg
+  theme: energy
+  author: Novoklimov / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:Crossing_electricity_pylon_330_kV_23.jpg
+- file: assets/photos/bank/energy-04.jpg
+  theme: energy
+  author: Novoklimov / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:Crossing_electricity_pylon_330_kV_21.jpg
+- file: assets/photos/bank/energy-05.jpg
+  theme: energy
+  author: Estemelmo Nólemë / Wikimedia Commons
+  license: CC BY 2.0
+  source: https://commons.wikimedia.org/wiki/File:Blackout_(54244305416).jpg
+- file: assets/photos/bank/energy-06.jpg
+  theme: energy
+  author: Valery hitraya / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: https://commons.wikimedia.org/wiki/File:Steam_of_Cars.jpg
+- file: assets/photos/bank/transport-01.jpg
+  theme: transport
+  author: Tim Adams / Wikimedia Commons
+  license: CC BY 3.0
+  source: https://commons.wikimedia.org/wiki/File:Kyiv_metro_at_Dnipro_station_in_2019.jpg
+- file: assets/photos/bank/transport-02.jpg
+  theme: transport
+  author: Reactor691 / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: https://commons.wikimedia.org/wiki/File:Train_view_kyiv_metro_red_line_nazipov.jpg
+- file: assets/photos/bank/transport-03.jpg
+  theme: transport
+  author: George Chernilevsky / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:Kyiv_Express_Tram_763_2019_G2.jpg
+- file: assets/photos/bank/transport-04.jpg
+  theme: transport
+  author: George Chernilevsky / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:Kyiv_Express_Tram_793_2019_G1.jpg
+- file: assets/photos/bank/money-01.jpg
+  theme: money
+  author: Wadco2 / Wikimedia Commons
+  license: CC BY-SA 3.0
+  source: https://commons.wikimedia.org/wiki/File:National_Bank_of_Ukraine_Building._Facade_detail._-_Instytutska_Street,_Pechersk_Raion,_Kiev.jpg
+- file: assets/photos/bank/money-02.jpg
+  theme: money
+  author: Musia-97 / Wikimedia Commons
+  license: CC BY-SA 3.0
+  source: https://commons.wikimedia.org/wiki/File:%D0%91%D1%83%D0%B4%D0%B8%D0%BD%D0%BE%D0%BA_%D0%9A%D0%B8%D1%97%D0%B2%D1%81%D1%8C%D0%BA%D0%BE%D1%97_%D0%BA%D0%BE%D0%BD%D1%82%D0%BE%D1%80%D0%B8_%D0%94%D0%B5%D1%80%D0%B6%D0%B0%D0%B2%D0%BD%D0%BE%D0%B3%D0%BE_%D0%B1%D0%B0%D0%BD%D0%BA%D1%83.JPG
+- file: assets/photos/bank/justice-01.jpg
+  theme: justice
+  author: Mr.Rosewater / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: https://commons.wikimedia.org/wiki/File:National_Anti-Corruption_Bureau_of_Ukraine_06.jpg
+- file: assets/photos/bank/justice-02.jpg
+  theme: justice
+  author: Mr.Rosewater / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: https://commons.wikimedia.org/wiki/File:National_Anti-Corruption_Bureau_of_Ukraine_08.jpg
+- file: assets/photos/bank/city-01.jpg
+  theme: city
+  author: Sergey Galyonkin / Wikimedia Commons
+  license: CC BY-SA 2.0
+  source: https://commons.wikimedia.org/wiki/File:Kyiv_skyline_(15688086793).jpg
+- file: assets/photos/bank/city-02.jpg
+  theme: city
+  author: spoilt.exile / Wikimedia Commons
+  license: CC BY-SA 2.0
+  source: https://commons.wikimedia.org/wiki/File:%D0%9D%D0%BE%D1%87%D0%BD%D0%BE%D0%B9_%D0%9F%D0%BE%D0%B4%D0%BE%D0%BB_Podil_at_night_(49530393651).jpg
+- file: assets/photos/bank/city-03.jpg
+  theme: city
+  author: spoilt.exile / Wikimedia Commons
+  license: CC BY-SA 2.0
+  source: https://commons.wikimedia.org/wiki/File:%D0%9F%D0%B0%D0%BD%D0%BE%D1%80%D0%B0%D0%BC%D0%B0_%D0%BD%D0%B0_%D0%9C%D0%BE%D1%81%D1%82_%D0%9C%D0%B5%D1%82%D1%80%D0%BE_%D0%B8_%D0%BD%D0%B0%D0%B1%D0%B5%D1%80%D0%B5%D0%B6%D0%BD%D1%83%D1%8E_-_View_of_the_Metro_Bridge_and_the_waterfront_(9641711845).jpg
+- file: assets/photos/bank/city-04.jpg
+  theme: city
+  author: Suicasmo / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: https://commons.wikimedia.org/wiki/File:Maidan_Nezalezhnosti_20190505-2.jpg
+- file: assets/photos/bank/city-05.jpg
+  theme: city
+  author: Suicasmo / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: https://commons.wikimedia.org/wiki/File:Maidan_Nezalezhnosti_20190505-3.jpg
+- file: assets/photos/bank/construction-01.jpg
+  theme: construction
+  author: Stanislav Nepochatov / Wikimedia Commons
+  license: CC BY-SA 3.0
+  source: https://commons.wikimedia.org/wiki/File:Sky_Crane_(246204437).jpeg
+- file: assets/photos/bank/housing-01.jpg
+  theme: housing
+  author: Toronto_guy / Wikimedia Commons
+  license: CC BY 3.0
+  source: https://commons.wikimedia.org/wiki/File:%D0%92%D1%83%D0%BB._%D0%A0%D0%BE%D0%BC%D0%B0%D0%BD%D0%B0_%D0%A0%D0%B0%D1%82%D1%83%D1%88%D0%BD%D0%BE%D0%B3%D0%BE,_35%D0%B0.jpg
+- file: assets/photos/bank/housing-02.jpg
+  theme: housing
+  author: Toronto_guy / Wikimedia Commons
+  license: CC BY 3.0
+  source: https://commons.wikimedia.org/wiki/File:%D0%92%D1%83%D0%BB._%D0%A0%D0%BE%D0%BC%D0%B0%D0%BD%D0%B0_%D0%A0%D0%B0%D1%82%D1%83%D1%88%D0%BD%D0%BE%D0%B3%D0%BE,_31.jpg
+- file: assets/photos/bank/bezpeka-03.jpg
+  theme: bezpeka
+  author: КМДА / Wikimedia Commons
+  license: CC BY 4.0
+  source: https://commons.wikimedia.org/wiki/File:Residential_building_in_Kyiv_(Shevchenkivskyi_District)_after_Russian_attack,_2024-07-08_(82).jpg
+- file: assets/photos/dv-photo-air-defense.jpg
+  theme: bezpeka
+  author: Ю-ФОРСЕ / Wikimedia Commons
+  license: CC0
+  source: ''
+- file: assets/photos/dv-photo-bessarabsky.jpg
+  theme: city
+  author: Juan Antonio Segal / Wikimedia Commons
+  license: CC BY 2.0
+  source: ''
+- file: assets/photos/dv-photo-blackout.jpg
+  theme: energy
+  author: Bektour / Wikimedia Commons
+  license: CC BY 4.0
+  source: ''
+- file: assets/photos/dv-photo-cabmin.jpg
+  theme: uriad
+  author: Prymasal / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: ''
+- file: assets/photos/dv-photo-drone-aftermath.jpg
+  theme: bezpeka
+  author: Національна поліція України / Wikimedia Commons
+  license: CC BY 4.0
+  source: ''
+- file: assets/photos/dv-photo-funicular.jpg
+  theme: transport
+  author: Maksym Kozlenko / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: ''
+- file: assets/photos/dv-photo-khreshchatyk.jpg
+  theme: city
+  author: Jorge Láscar / Wikimedia Commons
+  license: CC BY 2.0
+  source: ''
+- file: assets/photos/dv-photo-klitschko.jpg
+  theme: kmda
+  author: КМДА / Wikimedia Commons
+  license: CC BY 4.0
+  source: ''
+- file: assets/photos/dv-photo-kmda.jpg
+  theme: kmda
+  author: Alexostrov / Wikimedia Commons
+  license: CC BY-SA 3.0
+  source: ''
+- file: assets/photos/dv-photo-kyiv-attack-dsns.jpg
+  theme: bezpeka
+  author: ДСНС України / Wikimedia Commons
+  license: CC BY 4.0
+  source: ''
+- file: assets/photos/dv-photo-metro-alert.jpg
+  theme: bezpeka
+  author: КМДА / Wikimedia Commons
+  license: CC BY 4.0
+  source: ''
+- file: assets/photos/dv-photo-nabu.jpg
+  theme: justice
+  author: Mr.Rosewater / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: ''
+- file: assets/photos/dv-photo-power-line.jpg
+  theme: energy
+  author: VKras / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: ''
+- file: assets/photos/dv-photo-rada-2.jpg
+  theme: rada
+  author: Wadco2 / Wikimedia Commons
+  license: CC BY-SA 3.0
+  source: ''
+- file: assets/photos/dv-photo-rada.jpg
+  theme: rada
+  author: Wadco2 / Wikimedia Commons
+  license: CC BY-SA 3.0
+  source: ''
+- file: assets/photos/dv-photo-recharging.jpg
+  theme: energy
+  author: Valery hitraya / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: ''
+- file: assets/photos/dv-photo-tec5.jpg
+  theme: energy
+  author: Cherubic / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: ''
+- file: assets/photos/dv-photo-uriad.jpg
+  theme: uriad
+  author: KyivMax / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: ''
+- file: assets/photos/dv-photo-vaks.jpg
+  theme: justice
+  author: Адміністрація Президента України / Wikimedia Commons
+  license: CC BY 4.0
+  source: ''
+- file: assets/photos/dv-photo-winter-bridge.jpg
+  theme: city
+  author: Wavemeart / Wikimedia Commons
+  license: CC BY-SA 4.0
+  source: ''
+- file: assets/photos/dv-photo-zelensky.jpg
+  theme: ofis
+  author: Офіс Президента
+  license: CC0
+  source: ''

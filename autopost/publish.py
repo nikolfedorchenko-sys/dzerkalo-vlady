@@ -41,7 +41,7 @@ def unique_id(news, wanted):
     return nid
 
 
-def site_entry(a, nid, date):
+def site_entry(a, nid, date, photo=None):
     entry = {
         "id": nid,
         "rubric": a["rubric"],
@@ -53,6 +53,8 @@ def site_entry(a, nid, date):
         "sources": a["sources"],
         "auto": True,  # позначка: матеріал зробив автопостинг
     }
+    if photo:
+        entry["photo"] = photo
     if a.get("opinion"):
         entry["opinion"] = a["opinion"]
     if a.get("urgent"):
@@ -120,8 +122,11 @@ def git_push(message):
     def git(*args):
         return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True, text=True)
 
-    git("add", str(NEWS.relative_to(ROOT)))
-    if not git("status", "--porcelain", str(NEWS.relative_to(ROOT))).stdout.strip():
+    paths = [str(NEWS.relative_to(ROOT))]
+    if (ROOT / "site" / "assets" / "photos" / "auto").exists():
+        paths.append("site/assets/photos/auto")  # офіційні фото до нових статей
+    git("add", *paths)
+    if not git("status", "--porcelain", *paths).stdout.strip():
         return False
     git("commit", "-m", message)
     for attempt in range(3):

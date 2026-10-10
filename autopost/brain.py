@@ -10,6 +10,8 @@ from pathlib import Path
 
 import anthropic
 
+import photos
+
 log = logging.getLogger("dv")
 
 # Opus пише тексти; відбір і перевірку робить Sonnet – він значно менше витрачає ліміт підписки.
@@ -39,6 +41,7 @@ def rule(name):
 
 
 BRAND = rule("голос")
+PHOTO_THEMES = "- photo_theme: тема фото для картки, одна з: " + "; ".join(f"{k} ({v})" for k, v in photos.THEMES.items()) + "."
 TRIAGE_TASK = rule("відбір")
 REVIEW_TASK = rule("перевірка")
 WRITE_TASK = f"""Напиши матеріал ДВ про сюжет нижче, спираючись тільки на тексти джерел. Один сюжет – три тексти: сайт, Telegram, Facebook.
@@ -49,6 +52,7 @@ WRITE_TASK = f"""Напиши матеріал ДВ про сюжет нижче
 - card_title: заголовок для картинки-картки, до 70 знаків.
 - sources: джерела, на які спирається текст: назва органу чи медіа (наприклад «Верховна Рада», «Суспільне») і посилання – тільки з наданого списку. Першоджерело влади – першим.
 - urgent: true тільки якщо рішення вже ухвалено або подія відбувається зараз.
+{PHOTO_THEMES}
 
 САЙТ
 {rule("сайт")}
@@ -121,8 +125,9 @@ ARTICLE_SCHEMA = {
             },
         },
         "urgent": {"type": "boolean"},
+        "photo_theme": {"type": "string", "enum": list(photos.THEMES)},
     },
-    "required": ["id", "rubric", "title", "card_title", "lead", "facts", "quote", "context", "number", "impact",
+    "required": ["id", "rubric", "title", "card_title", "photo_theme", "lead", "facts", "quote", "context", "number", "impact",
                  "next", "opinion", "telegram", "facebook", "sources", "urgent"],
     "additionalProperties": False,
 }
@@ -253,6 +258,7 @@ SHORT_TASK = f"""Напиши короткий пост ДВ для Telegram п�
 - card_title: заголовок для картинки-картки, до 70 знаків.
 - sources: назва органу чи медіа і посилання – тільки з наданого списку, першоджерело влади – першим.
 - urgent: true тільки якщо рішення вже ухвалено або подія відбувається зараз.
+{PHOTO_THEMES}
 
 TELEGRAM
 {rule("telegram")}"""
@@ -260,8 +266,8 @@ TELEGRAM
 SHORT_SCHEMA = {
     "type": "object",
     "properties": {k: ARTICLE_SCHEMA["properties"][k]
-                   for k in ("id", "rubric", "title", "card_title", "telegram", "sources", "urgent")},
-    "required": ["id", "rubric", "title", "card_title", "telegram", "sources", "urgent"],
+                   for k in ("id", "rubric", "title", "card_title", "photo_theme", "telegram", "sources", "urgent")},
+    "required": ["id", "rubric", "title", "card_title", "photo_theme", "telegram", "sources", "urgent"],
     "additionalProperties": False,
 }
 

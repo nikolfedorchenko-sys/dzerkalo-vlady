@@ -2,10 +2,11 @@
 name = "dv-autopost-budylnyk"
 main = "index.js"
 compatibility_date = "2025-09-01"
-workers_dev = false
+workers_dev = true   # адреса для бота «Надіслати новину»
 
 [triggers]
 crons = ["2 4-20 * * *"]   # щогодини в UTC; покриває 07–22 за Києвом і влітку, і взимку
 
 [vars]
 REPO = "nikolfedorchenko-sys/dzerkalo-vlady"
+ADMIN_CHAT = "422470697"   # куди бот «Надіслати новину» пересилає повідомлення читачів

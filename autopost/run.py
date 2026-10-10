@@ -22,6 +22,7 @@ sys.path.insert(0, str(HERE))
 import brain  # noqa: E402
 import card  # noqa: E402
 import collect  # noqa: E402
+import photos  # noqa: E402
 import publish  # noqa: E402
 
 KYIV = ZoneInfo("Europe/Kyiv")
@@ -221,12 +222,14 @@ def main():
     full = [a for a in published if a["_full"]]
     data = publish.load_news()
     date = now_local.strftime("%Y-%m-%dT%H:%M")
+    OUT.mkdir(exist_ok=True)
     for a in published:
         a["id"] = publish.unique_id(data["news"], a["id"])
+        a["_photo"] = photos.pick(a, a["_texts"], state, OUT)
     for a in full:
-        data["news"].insert(0, publish.site_entry(a, a["id"], date))
+        a["_site_photo"] = photos.for_site(a, a["_photo"]) if mode == "live" else None
+        data["news"].insert(0, publish.site_entry(a, a["id"], date, a["_site_photo"]))
 
-    OUT.mkdir(exist_ok=True)
     if mode == "live":
         changed = publish.expire_urgent(data, now_local, lim["urgent_hours"])
         if publish.update_number_of_day(data, full, now_local):
@@ -245,8 +248,9 @@ def main():
         url = publish.article_url(a["id"]) if a["_full"] else ""
         label = brain.RUBRICS.get(a["rubric"], "")
         src_title = a["sources"][0]["title"] if a["sources"] else ""
-        card_path = card.render(OUT / f"{a['id']}.png", label, a["card_title"] or a["title"], src_title,
-                                urgent=a.get("urgent", False))
+        card_path = card.render_photo(OUT / f"{a['id']}.jpg", a["_photo"]["path"], label,
+                                      a["card_title"] or a["title"], src_title, photos.credit(a["_photo"]),
+                                      urgent=a.get("urgent", False))
         text = publish.telegram_text(a, label, url, cfg.get("channel_url"), cfg.get("submit_url"))
         where = []
         if mode == "dry":
