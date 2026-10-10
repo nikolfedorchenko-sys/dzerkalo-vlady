@@ -1,0 +1,14 @@
+# Секрети автопостингу – ніколи не в git
+.env
+.env.*
+!.env.example
+*.secret
+*.key
+secrets/
+config.local.*
+
+# Службове
+node_modules/
+__pycache__/
+.venv/
+*.log
