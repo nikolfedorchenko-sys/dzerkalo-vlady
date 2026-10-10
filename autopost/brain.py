@@ -100,6 +100,12 @@ ARTICLE_SCHEMA = {
             "additionalProperties": False,
         },
         "context": PARAS,
+        "number": {
+            "type": "object",
+            "properties": {"value": STR, "text": STR},
+            "required": ["value", "text"],
+            "additionalProperties": False,
+        },
         "impact": STR,
         "next": PARAS,
         "opinion": STR,
@@ -116,7 +122,7 @@ ARTICLE_SCHEMA = {
         },
         "urgent": {"type": "boolean"},
     },
-    "required": ["id", "rubric", "title", "card_title", "lead", "facts", "quote", "context", "impact",
+    "required": ["id", "rubric", "title", "card_title", "lead", "facts", "quote", "context", "number", "impact",
                  "next", "opinion", "telegram", "facebook", "sources", "urgent"],
     "additionalProperties": False,
 }

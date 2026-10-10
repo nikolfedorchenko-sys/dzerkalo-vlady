@@ -73,6 +73,32 @@ def article_body(a):
     return body
 
 
+MONTHS = ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня",
+          "жовтня", "листопада", "грудня"]
+
+
+def update_number_of_day(data, drafts, now_local):
+    """«Цифра дня» на головній: раз на день – найсильніша цифра з найважливішого сюжету дня."""
+    today = now_local.strftime("%Y-%m-%d")
+    current = data.get("numberOfDay") or {}
+    with_number = [a for a in drafts if (a.get("number") or {}).get("value")]
+    if not with_number:
+        return False
+    best = max(with_number, key=lambda a: a["_story"]["importance"])
+    # Нова цифра – якщо сьогодні ще не оновлювали, або сьогоднішня слабша за новий сюжет
+    if current.get("autoDate") == today and current.get("importance", 0) >= best["_story"]["importance"]:
+        return False
+    src = best["sources"][0]["title"] if best["sources"] else ""
+    data["numberOfDay"] = {
+        "value": best["number"]["value"],
+        "text": best["number"]["text"],
+        "note": f"{now_local.day} {MONTHS[now_local.month - 1]}" + (f" · Джерело: {src}" if src else ""),
+        "autoDate": today,
+        "importance": best["_story"]["importance"],
+    }
+    return True
+
+
 def expire_urgent(data, now_local, hours):
     """Знімає «Терміново» з автоматичних новин, старших за N годин, щоб червоний рядок не висів вічно."""
     changed = False

@@ -216,6 +216,8 @@ def main():
     OUT.mkdir(exist_ok=True)
     if mode == "live":
         changed = publish.expire_urgent(data, now_local, lim["urgent_hours"])
+        if publish.update_number_of_day(data, published, now_local):
+            log.info("Цифра дня: %s – %s", data["numberOfDay"]["value"], data["numberOfDay"]["text"])
         if published or changed:
             publish.save_news(data)
             msg = ("Автопостинг: " + "; ".join(a["title"] for a in published)) if published else \
