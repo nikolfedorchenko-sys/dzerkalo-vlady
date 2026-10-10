@@ -2,6 +2,10 @@
 import json
 import logging
 import os
+import re
+import shutil
+import subprocess
+import tempfile
 
 import anthropic
 
@@ -144,10 +148,62 @@ class Refused(Exception):
     pass
 
 
-_client = None
+class LimitReached(Exception):
+    """Вичерпано ліміт підписки Max – спробуємо в наступному запуску."""
+
+
+def engine():
+    """Через що звертаємося до Claude: підписка Max (Claude Code) або ключ API."""
+    if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        return "max"
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "api"
+    return None
 
 
 def _ask(task, content, schema, effort):
+    return (_ask_max if engine() == "max" else _ask_api)(task, content, schema, effort)
+
+
+def _ask_max(task, content, schema, effort):
+    """Запит через Claude Code на підписці Max: без інструментів, тільки текст → JSON за схемою."""
+    exe = shutil.which("claude") or shutil.which("claude.exe") or shutil.which("claude.cmd")
+    if not exe:
+        raise RuntimeError("Не знайдено Claude Code (claude) – його ставить робочий процес GitHub")
+    if exe.lower().endswith(".cmd"):  # Windows: обгортка npm ламає лапки в JSON, кличемо claude.exe напряму
+        native = os.path.join(os.path.dirname(exe), "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe")
+        exe = native if os.path.exists(native) else exe
+    cmd = [exe, "-p", "--output-format", "json", "--json-schema", json.dumps(schema),
+           "--system-prompt", BRAND, "--model", MODEL, "--effort", effort,
+           "--tools", "", "--strict-mcp-config", "--no-session-persistence"]
+    # Порожня тимчасова папка – щоб Claude Code не підхопив CLAUDE.md і налаштування з репозиторію
+    with tempfile.TemporaryDirectory() as cwd:
+        proc = subprocess.run(cmd, input=f"{task}\n\n{content}", capture_output=True, text=True,
+                              encoding="utf-8", cwd=cwd, timeout=900)
+    try:
+        out = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        raise RuntimeError(f"Claude Code: {(proc.stderr or proc.stdout)[-500:]}") from None
+    if out.get("is_error"):
+        msg = str(out.get("result", ""))
+        if re.search(r"limit|usage|quota|rate", msg, re.I):
+            raise LimitReached(msg)
+        raise RuntimeError(f"Claude Code: {msg}")
+    if out.get("stop_reason") == "refusal":
+        raise Refused("модель відмовилася обробляти цей матеріал")
+    log.info("Claude (Max): %s", {k: v for k, v in (out.get("usage") or {}).items()
+                                  if k in ("input_tokens", "output_tokens")})
+    if isinstance(out.get("structured_output"), dict):
+        return out["structured_output"]
+    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", str(out.get("result", "")).strip())
+    return json.loads(text)
+
+
+_client = None
+
+
+def _ask_api(task, content, schema, effort):
+    """Запасний шлях: Claude API за ключем (платно окремо від підписки)."""
     global _client
     _client = _client or anthropic.Anthropic()
     resp = _client.messages.create(

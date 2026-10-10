@@ -86,9 +86,9 @@ def main():
     lim = cfg["limits"]
     now = datetime.now(timezone.utc)
     now_local = now.astimezone(KYIV)
-    log.info("Режим: %s, модель: %s", mode, brain.MODEL)
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        log.warning("Немає ключа ANTHROPIC_API_KEY – автопостинг ще не налаштовано, нічого не роблю")
+    log.info("Режим: %s, модель: %s, доступ: %s", mode, brain.MODEL, brain.engine())
+    if not brain.engine():
+        log.warning("Немає CLAUDE_CODE_OAUTH_TOKEN (чи ANTHROPIC_API_KEY) – автопостинг ще не налаштовано")
         return
 
     tg_token = os.environ.get("TG_BOT_TOKEN", "")
@@ -120,7 +120,13 @@ def main():
     if fresh and budget > 0:
         # 2. Відбір сюжетів
         recent = [p["title"] for p in state["published"] if p["at"] > (now - timedelta(hours=72)).isoformat()]
-        stories = brain.triage(fresh, recent)
+        try:
+            stories = brain.triage(fresh, recent)
+        except brain.LimitReached as e:
+            # Матеріали не позначаємо як переглянуті – їх розберемо, коли ліміт оновиться
+            log.warning("Ліміт підписки Max вичерпано, пропускаю запуск: %s", e)
+            save_state(state)
+            return
         for it in fresh:
             state["seen"][it["key"]] = now.isoformat()
         stories = [s for s in stories if s["importance"] >= lim["min_importance"] and s["items"]]
@@ -141,6 +147,9 @@ def main():
                 draft = fix_dashes(brain.write(story, texts))
                 problems = check_draft(draft, texts)
                 verdict = brain.review(draft, texts) if not problems else {"ok": False, "problems": problems}
+            except brain.LimitReached as e:
+                log.warning("Ліміт підписки Max вичерпано, решту сюжетів пропускаю: %s", e)
+                break
             except brain.Refused as e:
                 verdict, draft = {"ok": False, "problems": [str(e)]}, {"title": story["topic"]}
             except Exception as e:  # noqa: BLE001

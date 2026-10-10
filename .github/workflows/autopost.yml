@@ -29,6 +29,9 @@ jobs:
 
       - run: pip install -r autopost/requirements.txt
 
+      # Claude Code – через нього робот працює на підписці Claude Max
+      - run: npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code
+
       # Памʼять між запусками: які матеріали вже бачили і що вже опублікували
       - uses: actions/cache/restore@v4
         with:
@@ -40,7 +43,8 @@ jobs:
         env:
           DV_MODE: ${{ vars.DV_MODE || 'test' }}
           DV_MODEL: ${{ vars.DV_MODEL }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}   # підписка Max
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}               # запасний варіант: платний API
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHANNEL_ID: ${{ vars.TG_CHANNEL_ID }}
           TG_TEST_CHANNEL_ID: ${{ vars.TG_TEST_CHANNEL_ID }}
