@@ -91,8 +91,6 @@
     if (!p) return '';
     return 'Фото: ' + [p.author, p.license].filter(Boolean).join(', ');
   }
-  /* Яку частину фото показувати при обрізці: photo.position, напр. "50% 25%". */
-  function pos(p) { return p && p.position ? ' style="object-position: ' + esc(p.position) + '"' : ''; }
   function kicker(n) { return n.kicker || rubricName(n.rubric); }
 
   /* ---------- шапка й підвал ---------- */
@@ -170,7 +168,7 @@
   function cardHTML(n, opts) {
     opts = opts || {};
     var p = n.photo;
-    var img = p && p.file ? '<a class="card__img" href="' + articleUrl(n) + '" tabindex="-1" aria-hidden="true"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" loading="lazy" width="600" height="400"' + pos(p) + '></a>' : '';
+    var img = p && p.file ? '<a class="card__img" href="' + articleUrl(n) + '" tabindex="-1" aria-hidden="true"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" loading="lazy" width="600" height="400"></a>' : '';
     var k = kicker(n);
     var label = k ? (n.rubric ? '<a class="label" href="' + rubricUrl(n.rubric) + '">' + esc(k) + '</a>' : '<span class="label">' + esc(k) + '</span>') : '';
     var extra = '';
@@ -199,7 +197,7 @@
 
     if (hero) {
       var p = hero.photo;
-      var fig = p && p.file ? '<figure class="hero__fig"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" width="1200" height="800" fetchpriority="high"' + pos(p) + '><figcaption class="photo-credit">' + esc(credit(p)) + '</figcaption></figure>' : '';
+      var fig = p && p.file ? '<figure class="hero__fig"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" width="1200" height="800" fetchpriority="high"><figcaption class="photo-credit">' + esc(credit(p)) + '</figcaption></figure>' : '';
       var src = hero.sources && hero.sources[0] ? ' · Джерело: ' + esc(hero.sources[0].title) : '';
       heroEl.innerHTML = fig + '<div class="hero__body">' +
         (kicker(hero) ? '<a class="tag" href="' + rubricUrl(hero.rubric) + '">' + esc(kicker(hero)) + '</a>' : '') +
@@ -250,18 +248,9 @@
     return '<div class="impact"><div class="impact__label">' + esc(i.label || 'Що це означає для тебе') + '</div><div class="impact__text">' + inline(i.text) + '</div></div>';
   }
 
-  /* «Перевірка фактів»: вердикт – Правда / Маніпуляція / Неправда (brand/BRAND.md, розділ 7). */
-  function verdictHTML(v) {
-    return '<div class="verdict"><div class="verdict__label">Вердикт</div>' +
-      '<div class="verdict__value">' + esc(v.label) + '</div>' +
-      (v.claim ? '<div class="verdict__claim"><strong>Твердження:</strong> ' + inline(v.claim) + '</div>' : '') +
-      (v.text ? '<div class="verdict__text">' + inline(v.text) + '</div>' : '') + '</div>';
-  }
-
   function bodyHTML(n) {
     var blocks = Array.isArray(n.body) ? n.body : (n.body ? [n.body] : []);
     var out = [];
-    if (n.verdict && n.verdict.label) out.push(verdictHTML(n.verdict));
     blocks.forEach(function (b, i) {
       if (typeof b === 'string') out.push('<p>' + inline(b) + '</p>');
       else if (b && b.h2) out.push('<h2>' + inline(b.h2) + '</h2>');
@@ -297,7 +286,7 @@
     setActiveNav(n.rubric);
     var p = n.photo, k = kicker(n);
     var shareUrl = encodeURIComponent(location.href);
-    var fig = p && p.file ? '<figure class="article__fig"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" width="1200" height="675"' + pos(p) + '>' +
+    var fig = p && p.file ? '<figure class="article__fig"><img src="' + esc(p.file) + '" alt="' + esc(p.alt) + '" width="1200" height="675">' +
       '<figcaption>' + (p.caption ? esc(p.caption) + '. ' : '') + esc(credit(p)) + '</figcaption></figure>' : '';
 
     var related = news.filter(function (x) { return x !== n && n.rubric && x.rubric === n.rubric; });
