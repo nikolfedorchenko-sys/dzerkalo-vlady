@@ -9,7 +9,7 @@
 3. Брендбук – `brand/BRAND.md` (логотип, голос, рубрики, Telegram) і `brand/SOCIAL.md` (картки для соцмереж).
 
 ## Напрями роботи (кожен – в окремому чаті)
-- Сайт – папка `site/`, інструкція `САЙТ.md`. Живий сайт: https://dzerkalo-vlady.pages.dev/
+- Сайт – папка `site/`, інструкція `САЙТ.md`. Живий сайт: https://dzerkalo-vlady.com/ (запасна адреса – https://dzerkalo-vlady.pages.dev/)
 - Автопостинг у соцмережі – папка `autopost/`, завдання `autopost/TASK.md`.
 
 ## Стиль сайту – «преміум v2» (важливо)
