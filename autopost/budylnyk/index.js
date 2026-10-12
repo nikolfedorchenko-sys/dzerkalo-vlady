@@ -1,7 +1,9 @@
 // Cloudflare Worker «Дзеркало влади»:
 // 1) будильник автопостингу – щогодини запускає робота в GitHub; робот сам перевіряє,
 //    чи зараз година публікації (autopost/config.yaml, рядок slots);
-// 2) бот «Надіслати новину» – вітається, пересилає редакції (ADMIN_CHAT) усе, що надіслали люди, і дякує.
+// 2) бот «Надіслати новину» – вітається, пересилає редакції (ADMIN_CHAT) усе, що надіслали люди, і дякує;
+// 3) кнопки «Опублікувати» / «Відхилити» під чернетками, які робот надсилає власнику (бот автопостингу):
+//    схвалення зберігаються на добу в KV (APPROVALS), і робот у GitHub публікує всі схвалені чернетки.
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(wake(env));
@@ -10,15 +12,34 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     // Одноразове підключення бота: відкрити /setup у браузері
+    // Підключення ботів: відкрити /setup у браузері (робиться саме після кожного розгортання)
     if (request.method === "GET" && url.pathname === "/setup") {
       const res = await tg(env, "setWebhook", {
         url: `${url.origin}/telegram`,
         secret_token: await hookSecret(env),
         allowed_updates: ["message"],
       });
-      return new Response(res.ok ? "Бот підключено" : `Помилка: ${res.description}`, {
-        headers: { "content-type": "text/plain; charset=utf-8" },
-      });
+      const lines = [res.ok ? "Бот «Надіслати новину» підключено" : `Бот «Надіслати новину»: помилка ${res.description}`];
+      if (env.AUTOPOST_BOT_TOKEN) {
+        const res2 = await tg(env, "setWebhook", {
+          url: `${url.origin}/autopost`,
+          secret_token: await hookSecret(env, env.AUTOPOST_BOT_TOKEN),
+          allowed_updates: ["callback_query"],
+        }, env.AUTOPOST_BOT_TOKEN);
+        lines.push(res2.ok ? "Кнопки бота автопостингу підключено" : `Бот автопостингу: помилка ${res2.description}`);
+      } else {
+        lines.push("Бот автопостингу: немає секрету AUTOPOST_BOT_TOKEN");
+      }
+      return new Response(lines.join("\n"), { headers: { "content-type": "text/plain; charset=utf-8" } });
+    }
+    if (request.method === "POST" && url.pathname === "/autopost") {
+      if (!env.AUTOPOST_BOT_TOKEN ||
+          request.headers.get("X-Telegram-Bot-Api-Secret-Token") !== (await hookSecret(env, env.AUTOPOST_BOT_TOKEN))) {
+        return new Response("forbidden", { status: 403 });
+      }
+      const update = await request.json();
+      if (update.callback_query) await onButton(env, update.callback_query);
+      return new Response("ok");
     }
     // Діагностика: який бот підключено і чи доходять до нього повідомлення (токен не показується)
     if (request.method === "GET" && url.pathname === "/status") {
@@ -65,8 +86,38 @@ async function onMessage(env, msg) {
   await tg(env, "sendMessage", { chat_id: msg.chat.id, text: THANKS });
 }
 
-async function tg(env, method, body) {
-  const res = await fetch(`https://api.telegram.org/bot${env.NEWS_BOT_TOKEN}/${method}`, {
+// Кнопка під чернеткою: «pub:<ключ>» – опублікувати, «rej:<ключ>» – відхилити. Натискати може тільки власник.
+async function onButton(env, q) {
+  const token = env.AUTOPOST_BOT_TOKEN;
+  const answer = (text) => tg(env, "answerCallbackQuery", { callback_query_id: q.id, text }, token);
+  if (String(q.from?.id) !== String(env.ADMIN_CHAT)) return answer("Недостатньо прав");
+  const [act, key] = String(q.data || "").split(":");
+  const mark = (text) =>
+    tg(env, "editMessageReplyMarkup", {
+      chat_id: q.message.chat.id,
+      message_id: q.message.message_id,
+      reply_markup: { inline_keyboard: [[{ text, callback_data: "noop" }]] },
+    }, token);
+  if (act === "rej" && key) {
+    await env.APPROVALS.delete(`ok:${key}`);
+    await mark("❌ Відхилено");
+    return answer("Відхилено");
+  }
+  if (act === "pub" && key) {
+    await env.APPROVALS.put(`ok:${key}`, "1", { expirationTtl: 86400 });
+    // Передаємо всі схвалення за добу: якщо GitHub скасує чергу, наступний запуск однаково опублікує всі
+    const list = await env.APPROVALS.list({ prefix: "ok:" });
+    const keys = list.keys.map((k) => k.name.slice(3)).join(",");
+    const ok = await dispatch(env, { action: "Опублікувати чернетку", drafts: keys });
+    if (!ok) return answer("Не вдалося запустити робота – спробуйте ще раз");
+    await mark("⏳ Публікується – за 2–5 хвилин прийде звіт");
+    return answer("Публікую");
+  }
+  return answer("");
+}
+
+async function tg(env, method, body, token = env.NEWS_BOT_TOKEN) {
+  const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -75,13 +126,17 @@ async function tg(env, method, body) {
 }
 
 // Секрет для вебхука виводимо з токена бота – окремо нічого зберігати не треба
-async function hookSecret(env) {
-  const data = new TextEncoder().encode(`dv-news-${env.NEWS_BOT_TOKEN}`);
+async function hookSecret(env, token = env.NEWS_BOT_TOKEN) {
+  const data = new TextEncoder().encode(`dv-news-${token}`);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 48);
 }
 
 async function wake(env) {
+  await dispatch(env, { action: "За розкладом" });
+}
+
+async function dispatch(env, inputs) {
   const url = `https://api.github.com/repos/${env.REPO}/actions/workflows/autopost.yml/dispatches`;
   const res = await fetch(url, {
     method: "POST",
@@ -91,7 +146,8 @@ async function wake(env) {
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "dv-autopost-budylnyk",
     },
-    body: JSON.stringify({ ref: "main", inputs: { action: "За розкладом" } }),
+    body: JSON.stringify({ ref: "main", inputs }),
   });
   if (!res.ok) console.log(`GitHub відповів ${res.status}: ${await res.text()}`);
+  return res.ok;
 }

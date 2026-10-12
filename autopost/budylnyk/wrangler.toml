@@ -1,4 +1,6 @@
-# Cloudflare Worker «будильник» для автопостингу. Розгортання: npx wrangler deploy (з цієї папки).
+# Cloudflare Worker «будильник» для автопостингу. Розгортається сам через GitHub Actions
+# (.github/workflows/budylnyk.yml) після кожної зміни в цій папці.
+# Секрети Worker: GH_TOKEN, NEWS_BOT_TOKEN, AUTOPOST_BOT_TOKEN (останній ставить той самий робочий процес).
 name = "dv-autopost-budylnyk"
 main = "index.js"
 compatibility_date = "2025-09-01"
@@ -10,3 +12,8 @@ crons = ["2 4-20 * * *"]   # щогодини в UTC; покриває 07–22 �
 [vars]
 REPO = "nikolfedorchenko-sys/dzerkalo-vlady"
 ADMIN_CHAT = "422470697"   # куди бот «Надіслати новину» пересилає повідомлення читачів
+
+# Схвалені власником чернетки (кнопка «Опублікувати»), зберігаються добу
+[[kv_namespaces]]
+binding = "APPROVALS"
+id = "d196d288c4624686ab6d0f7d9dd21bf2"

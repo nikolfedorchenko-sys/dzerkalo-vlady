@@ -30,6 +30,17 @@ FREE = re.compile(r"^(CC0|CC BY(-SA)? [0-9.]+|Public domain|PD.*)$", re.I)
 NOT_PHOTO = re.compile(r"map|logo|coat of arms|flag|diagram|chart|scheme|svg|seal|emblem|герб|прапор|карта|схема"
                        r"|banknote|coin|stamp|poster|document|plaque", re.I)
 
+# Жодних фото з Росії чи Білорусі: прапори, вивіски, вибори РФ тощо. Перевіряємо назву, опис і категорії файлу.
+FOREIGN = re.compile(r"russia|russian|moscow|st\.? petersburg|saint petersburg|soviet|ussr|kremlin|belarus|minsk"
+                     r"|росси|россия|москв|петербург|кремл|ссср|белорус|беларус|білорус|росі[яї]|московськ"
+                     r"|[ыэъё]", re.I)
+WAR = re.compile(r"russian (invasion|attack|strike|aggression|missile|drone|shelling)s?( of| on)?|russo-ukrainian"
+                 r"|російськ\w* (вторгнен|атак|агресі|обстріл|удар)\w*", re.I)
+# Фото має бути саме з України: про це має йтися в назві, описі чи категоріях
+UKRAINE = re.compile(r"ukrain|kyiv|kiev|україн|київ|kharkiv|lviv|odesa|odessa|dnipro|zaporizh|verkhovna rada"
+                     r"|zelensk|зеленськ|chernihiv|poltava|vinnytsia|mykolaiv|kherson|sumy|zhytomyr|rivne|lutsk"
+                     r"|uzhhorod|ternopil|ivano-frankivsk|chernivtsi|cherkasy|kropyvnytskyi", re.I)
+
 # Довгі офіційні підписи авторів на Commons → коротко українською
 AUTHORS = {
     "PRESIDENT OF UKRAINE": "Офіс Президента України",
@@ -80,7 +91,8 @@ def _commons(query, out_path, state):
         r = requests.get(COMMONS, headers=UA, timeout=40, params={
             "action": "query", "format": "json", "generator": "search",
             "gsrsearch": f"{query} filetype:bitmap", "gsrnamespace": 6, "gsrlimit": 25,
-            "prop": "imageinfo", "iiprop": "url|size|extmetadata", "iiurlwidth": 1600})
+            "prop": "imageinfo|categories", "iiprop": "url|size|extmetadata", "iiurlwidth": 1600,
+            "cllimit": "max"})
         pages = r.json().get("query", {}).get("pages", {}).values()
     except Exception as e:  # noqa: BLE001
         log.info("Wikimedia не відповіла (%s): %s", query, e)
@@ -91,6 +103,12 @@ def _commons(query, out_path, state):
         meta = ii.get("extmetadata", {})
         lic = meta.get("LicenseShortName", {}).get("value", "").strip()
         w, h = ii.get("width", 0), ii.get("height", 0)
+        about = " ".join([title, meta.get("ImageDescription", {}).get("value", ""),
+                          meta.get("ObjectName", {}).get("value", ""), meta.get("Categories", {}).get("value", ""),
+                          *[c.get("title", "") for c in p.get("categories", [])]])
+        about = WAR.sub("", about)  # «Russian invasion of Ukraine» – це про Україну, не про Росію
+        if FOREIGN.search(about) or not UKRAINE.search(about):
+            continue
         if (title in used or not FREE.match(lic) or NOT_PHOTO.search(title)
                 or w < 1200 or not 1.2 <= w / max(h, 1) <= 2.4 or not ii.get("thumburl")):
             continue

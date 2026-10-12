@@ -163,11 +163,14 @@ def _tg(method, token, **kw):
     return data["result"]
 
 
-def telegram_text(a, rubric_label, url, channel_url, submit_url):
-    """Будова поста за brand/BRAND.md, розділ 9. url – стаття на сайті (порожньо, якщо пост тільки для Telegram)."""
+def telegram_text(a, url, channel_url, submit_url):
+    """Пост одразу з новини: жирний заголовок на 3–5 слів, текст, хештеги, посилання, підпис.
+    url – стаття на сайті (порожньо, якщо пост тільки для Telegram)."""
     e = html.escape
-    label = "ТЕРМІНОВО" if a.get("urgent") else rubric_label
-    parts = [e(label), f"<b>{e(a['title'])}</b>", *[e(p) for p in a["telegram"]]]
+    parts = [f"<b>{e(a.get('tg_title') or a['title'])}</b>", *[e(p) for p in a["telegram"]]]
+    tags = list(dict.fromkeys(t.strip().lstrip("#").replace(" ", "_") for t in a.get("hashtags", []) if t.strip()))
+    if tags:
+        parts.append(" ".join("#" + e(t) for t in tags[:3]))
     lines = []  # рядок «Джерело» не ставимо – не рекламуємо інші медіа
     if url:
         lines.append(f'<a href="{e(url)}">Читати повністю на сайті</a>')
@@ -190,6 +193,19 @@ def send_telegram(token, chat_id, text, card_path=None):
             _tg("sendPhoto", token, data={"chat_id": chat_id}, files={"photo": f})
     return _tg("sendMessage", token, json={"chat_id": chat_id, "text": text, "parse_mode": "HTML",
                                            "link_preview_options": {"is_disabled": True}})
+
+
+def ask_owner(token, chat_id, text, key):
+    """Чернетка власнику з кнопками; натискання обробляє Cloudflare Worker (autopost/budylnyk)."""
+    buttons = [[{"text": "✅ Опублікувати", "callback_data": f"pub:{key}"},
+                {"text": "❌ Відхилити", "callback_data": f"rej:{key}"}]]
+    _tg("sendMessage", token, json={"chat_id": chat_id, "text": text, "parse_mode": "HTML",
+                                    "link_preview_options": {"is_disabled": True},
+                                    "reply_markup": {"inline_keyboard": buttons}})
+
+
+def delete_telegram(token, chat_id, message_id):
+    _tg("deleteMessage", token, json={"chat_id": chat_id, "message_id": message_id})
 
 
 def notify(token, chat_id, text):

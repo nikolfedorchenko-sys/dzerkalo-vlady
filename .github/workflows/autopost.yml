@@ -17,6 +17,16 @@ on:
           - "Звичайний запуск"
           - "Перевірити Facebook"
           - "За розкладом"
+          - "Опублікувати чернетку"
+          - "Видалити пост з Telegram"
+      drafts:
+        description: "Чернетки для публікації (ставить бот, коли ви тиснете «Опублікувати»)"
+        type: string
+        default: ""
+      post:
+        description: "Для «Видалити пост з Telegram»: посилання на пост, напр. https://t.me/dzerkalo_vlady/27"
+        type: string
+        default: ""
 
 concurrency:
   group: autopost
@@ -75,7 +85,9 @@ jobs:
       - name: Запуск
         env:
           DV_MODE: ${{ vars.DV_MODE || 'test' }}
-          DV_ACTION: ${{ inputs.action == 'Перевірити Facebook' && 'facebook-check' || '' }}
+          DV_ACTION: ${{ inputs.action == 'Перевірити Facebook' && 'facebook-check' || inputs.action == 'Опублікувати чернетку' && 'publish-draft' || inputs.action == 'Видалити пост з Telegram' && 'delete-post' || '' }}
+          DV_DRAFTS: ${{ inputs.drafts }}
+          DV_POST: ${{ inputs.post }}
           DV_MODEL: ${{ vars.DV_MODEL }}             # модель для текстів (за замовчуванням Opus)
           DV_MODEL_FAST: ${{ vars.DV_MODEL_FAST }}   # модель для відбору й перевірки (за замовчуванням Sonnet)
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}   # підписка Max

@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 
 import anthropic
+import yaml
 
 import photos
 
@@ -41,9 +42,13 @@ def rule(name):
 
 
 BRAND = rule("голос")
+# Хештеги для Telegram – список у config.yaml (рядок hashtags)
+HASHTAGS = yaml.safe_load((Path(__file__).resolve().parent / "config.yaml").read_text(encoding="utf-8"))["hashtags"]
+TG_TAGS = "Список хештегів: " + ", ".join(HASHTAGS) + "."
 PHOTO_THEMES = ("- photo_query: запит англійською (2–5 слів) для пошуку фото на Wikimedia Commons, яке прямо показує предмет новини: "
                 "конкретне місце, будівлю, об'єкт чи подію (напр. «Kyiv Metro train», «Verkhovna Rada session hall», "
-                "«Kyiv thermal power plant», «Kyiv apartment block damaged»). Не абстракції й не імена людей.\n"
+                "«Kyiv thermal power plant», «Kyiv apartment block damaged»). Не абстракції й не імена людей. "
+                "Завжди з «Kyiv» чи «Ukraine» – фото має бути з України.\n"
                 "- photo_query_alt: запасний запит, ширший (напр. «Kyiv metro», «Ukraine power line»).\n"
                 "- photo_theme: тема фото на випадок, якщо пошук нічого не дасть, одна з: "
                 + "; ".join(f"{k} ({v})" for k, v in photos.THEMES.items()) + ".")
@@ -64,6 +69,7 @@ WRITE_TASK = f"""Напиши матеріал ДВ про сюжет нижче
 
 TELEGRAM
 {rule("telegram")}
+{TG_TAGS}
 
 FACEBOOK
 {rule("facebook")}"""
@@ -81,8 +87,9 @@ TRIAGE_SCHEMA = {
                     "rubric": {"type": "string", "enum": AUTO_RUBRICS},
                     "importance": {"type": "integer"},
                     "urgent": {"type": "boolean"},
+                    "scope": {"type": "string", "enum": ["national", "kyiv", "regional"]},
                 },
-                "required": ["items", "topic", "rubric", "importance", "urgent"],
+                "required": ["items", "topic", "rubric", "importance", "urgent", "scope"],
                 "additionalProperties": False,
             },
         }
@@ -118,7 +125,9 @@ ARTICLE_SCHEMA = {
         "impact": STR,
         "next": PARAS,
         "opinion": STR,
+        "tg_title": STR,
         "telegram": PARAS,
+        "hashtags": {"type": "array", "items": {"type": "string", "enum": HASHTAGS}},
         "facebook": STR,
         "sources": {
             "type": "array",
@@ -135,7 +144,7 @@ ARTICLE_SCHEMA = {
         "photo_query_alt": STR,
     },
     "required": ["id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt", "lead", "facts", "quote", "context", "number", "impact",
-                 "next", "opinion", "telegram", "facebook", "sources", "urgent"],
+                 "next", "opinion", "tg_title", "telegram", "hashtags", "facebook", "sources", "urgent"],
     "additionalProperties": False,
 }
 
@@ -269,6 +278,7 @@ SHORT_TASK = f"""Напиши короткий пост ДВ для Telegram п�
 
 TELEGRAM
 {rule("telegram")}
+{TG_TAGS}
 
 FACEBOOK
 {rule("facebook")}
@@ -278,9 +288,9 @@ SHORT_SCHEMA = {
     "type": "object",
     "properties": {k: ARTICLE_SCHEMA["properties"][k]
                    for k in ("id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt",
-                             "telegram", "facebook", "sources", "urgent")},
+                             "tg_title", "telegram", "hashtags", "facebook", "sources", "urgent")},
     "required": ["id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt",
-                 "telegram", "facebook", "sources", "urgent"],
+                 "tg_title", "telegram", "hashtags", "facebook", "sources", "urgent"],
     "additionalProperties": False,
 }
 

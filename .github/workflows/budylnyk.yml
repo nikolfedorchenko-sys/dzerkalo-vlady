@@ -1,0 +1,45 @@
+# Розгортання Cloudflare Worker «будильник» (autopost/budylnyk): будильник автопостингу,
+# бот «Надіслати новину» і кнопки «Опублікувати / Відхилити» під чернетками.
+# Запускається сам після кожної зміни в autopost/budylnyk/ або вручну кнопкою «Run workflow».
+# Потрібні GitHub Secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, TG_BOT_TOKEN (див. autopost/README.md).
+name: Будильник (Cloudflare)
+
+on:
+  push:
+    branches: [main]
+    paths: ["autopost/budylnyk/**", ".github/workflows/budylnyk.yml"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: autopost/budylnyk
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Чи є доступ до Cloudflare
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Немає секрету CLOUDFLARE_API_TOKEN – інструкція в autopost/README.md, розділ «Будильник»"
+            exit 1
+          fi
+
+      - name: Розгорнути Worker
+        run: npx --yes wrangler@4 deploy | tee deploy.log
+
+      - name: Токен бота автопостингу для кнопок
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        run: printf '%s' "$TG_BOT_TOKEN" | npx --yes wrangler@4 secret put AUTOPOST_BOT_TOKEN
+
+      - name: Підключити ботів (вебхуки Telegram)
+        run: |
+          URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          echo "Адреса Worker: $URL"
+          sleep 5
+          curl -sS "$URL/setup"
