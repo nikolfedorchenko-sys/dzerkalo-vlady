@@ -215,6 +215,10 @@ def publish_approved(cfg, state, mode, now, keys):
     for key in keys:
         if key in done:
             continue  # бот щоразу передає всі схвалення за добу – вже опубліковані пропускаємо
+        if key.startswith("test"):
+            report.append("Тест: кнопка «Опублікувати» працює – бот запустив робота. Нічого не опубліковано.")
+            done[key] = now.isoformat()
+            continue
         p = pending.pop(key, None)
         if not p:
             report.append(f"Чернетка {escape(key)} застаріла (старша за добу) – не публікую.")
@@ -232,6 +236,18 @@ def publish_approved(cfg, state, mode, now, keys):
         publish.notify(os.environ.get("TG_BOT_TOKEN", ""), os.environ.get("TG_ADMIN_CHAT_ID", ""),
                        head + "\n\n".join(report))
     log.info("Опубліковано за рішенням власника: %d", len(ready))
+
+
+def test_buttons(now):
+    """Дія «Тест кнопок»: власнику приходить пробна чернетка з кнопками; натискання нічого не публікує."""
+    key = "test" + hashlib.sha1(now.isoformat().encode()).hexdigest()[:6]
+    draft = {"tg_title": "Тестова чернетка", "telegram": [
+        "Це перевірка кнопок. Натисніть «Опублікувати» – за 2–5 хвилин прийде звіт, що кнопка працює.",
+        "Нічого не буде опубліковано ні в каналі, ні на сайті, ні у Facebook."], "hashtags": []}
+    text = ("<b>На ваш розсуд</b> (ТЕСТ)\n\n" + publish.telegram_text(draft, "", "", "")
+            + "\n\n<i>Редактор відхилив:</i>\n– це тест, причин немає")
+    publish.ask_owner(os.environ.get("TG_BOT_TOKEN", ""), os.environ.get("TG_ADMIN_CHAT_ID", ""), text, key)
+    log.info("Тестову чернетку надіслано власнику (%s)", key)
 
 
 def delete_post(mode):
@@ -259,6 +275,8 @@ def main():
         return facebook_check(cfg)
     if action == "delete-post":
         return delete_post(mode)
+    if action == "test-buttons":
+        return test_buttons(now)
 
     state = load_state()
     keep_after = (now - timedelta(days=14)).isoformat()
