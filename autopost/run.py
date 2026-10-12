@@ -29,6 +29,7 @@ import publish  # noqa: E402
 KYIV = ZoneInfo("Europe/Kyiv")
 STATE = HERE / "state" / "state.json"
 OUT = HERE / "out"
+DRAFTS = HERE / "state" / "drafts"  # фото й картки чернеток «на розсуд» – зберігаються між запусками добу
 log = logging.getLogger("dv")
 
 
@@ -112,12 +113,27 @@ def slim_texts(texts):
     return [{k: t.get(k) for k in ("source", "kind", "url", "image", "links")} for t in texts]
 
 
+def draft_card(key, draft, texts, state):
+    """Фото й картка для чернетки: ті самі підуть у пост, якщо власник натисне «Опублікувати»."""
+    DRAFTS.mkdir(parents=True, exist_ok=True)
+    photo = photos.pick({**draft, "id": key}, texts, state, DRAFTS)
+    label = brain.RUBRICS.get(draft.get("rubric"), "")
+    card_path = card.render_photo(DRAFTS / f"{key}.jpg", photo["path"], label,
+                                  draft.get("card_title") or draft["title"], "", photos.credit(photo))
+    return {**photo, "path": str(photo["path"])}, card_path
+
+
 def offer_draft(state, draft, kind, story, texts, problems, now):
-    """Відхилену чернетку зберігаємо на добу; повертає (ключ, текст) для повідомлення власнику з кнопками."""
+    """Відхилену чернетку зберігаємо на добу; повертає (ключ, текст, картка) для повідомлення власнику з кнопками."""
     key = hashlib.sha1(f"{draft['id']}{now.isoformat()}".encode()).hexdigest()[:10]
     tg = story.get("scope") != "regional"
+    try:
+        photo, card_path = draft_card(key, draft, texts, state)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Картка для чернетки не вийшла: %s", e)
+        photo, card_path = None, None
     state.setdefault("pending", {})[key] = {
-        "at": now.isoformat(), "kind": kind, "tg": tg, "story": story, "problems": problems,
+        "at": now.isoformat(), "kind": kind, "tg": tg, "story": story, "problems": problems, "photo": photo,
         "draft": {k: v for k, v in draft.items() if not k.startswith("_")}, "texts": slim_texts(texts)}
     where = ("сайт + Facebook" if kind == "full" else "Facebook") + (" + Telegram" if tg else "")
     preview = publish.telegram_text(draft, "", "", "")
@@ -126,7 +142,7 @@ def offer_draft(state, draft, kind, story, texts, problems, now):
         head += f"\nНа сайті: {escape(draft['title'])}"
     why = "\n".join("– " + escape(p) for p in problems)
     text = f"{head}\n\n{preview}\n\n<i>Редактор відхилив:</i>\n{why}"
-    return key, (text[:3990] + "…") if len(text) > 4000 else text
+    return key, (text[:3990] + "…") if len(text) > 4000 else text, card_path
 
 
 def release(published, cfg, state, mode, now, report):
@@ -144,7 +160,7 @@ def release(published, cfg, state, mode, now, report):
     OUT.mkdir(exist_ok=True)
     for a in published:
         a["id"] = publish.unique_id(data["news"], a["id"])
-        a["_photo"] = photos.pick(a, a["_texts"], state, OUT)
+        a["_photo"] = a.get("_photo") or photos.pick(a, a["_texts"], state, OUT)
     for a in full:
         a["_site_photo"] = photos.for_site(a, a["_photo"]) if mode == "live" else None
         data["news"].insert(0, publish.site_entry(a, a["id"], date, a["_site_photo"]))
@@ -226,6 +242,9 @@ def publish_approved(cfg, state, mode, now, keys):
             continue
         a = fix_dashes(p["draft"])
         a.update({"_story": p["story"], "_full": p["kind"] == "full", "_texts": p["texts"], "_tg": p["tg"]})
+        ph = p.get("photo")
+        if ph and Path(ph["path"]).exists():  # те саме фото, що було в чернетці
+            a["_photo"] = {**ph, "path": Path(ph["path"])}
         ready.append(a)
         done[key] = now.isoformat()
     if ready:
@@ -246,7 +265,11 @@ def test_buttons(now):
         "Нічого не буде опубліковано ні в каналі, ні на сайті, ні у Facebook."], "hashtags": []}
     text = ("<b>На ваш розсуд</b> (ТЕСТ)\n\n" + publish.telegram_text(draft, "", "", "")
             + "\n\n<i>Редактор відхилив:</i>\n– це тест, причин немає")
-    publish.ask_owner(os.environ.get("TG_BOT_TOKEN", ""), os.environ.get("TG_ADMIN_CHAT_ID", ""), text, key)
+    OUT.mkdir(exist_ok=True)
+    photo = photos.pick({"id": key, "photo_theme": "rada"}, [], {}, OUT)
+    card_path = card.render_photo(OUT / f"{key}.jpg", photo["path"], "ВЕРХОВНА РАДА", "Тестова чернетка з картинкою",
+                                  "", photos.credit(photo))
+    publish.ask_owner(os.environ.get("TG_BOT_TOKEN", ""), os.environ.get("TG_ADMIN_CHAT_ID", ""), text, key, card_path)
     log.info("Тестову чернетку надіслано власнику (%s)", key)
 
 
@@ -284,6 +307,10 @@ def main():
     state["published"] = [p for p in state["published"] if p["at"] > keep_after]
     day_ago = (now - timedelta(hours=24)).isoformat()
     state["pending"] = {k: v for k, v in state.get("pending", {}).items() if v["at"] > day_ago}
+    if DRAFTS.exists():  # фото й картки застарілих чернеток – прибираємо
+        for f in DRAFTS.iterdir():
+            if f.name[:10] not in state["pending"]:
+                f.unlink()
     state["approved_done"] = {k: v for k, v in state.get("approved_done", {}).items() if v > keep_after}
     if action == "publish-draft":
         keys = [k for k in os.environ.get("DV_DRAFTS", "").replace(" ", "").split(",") if k]
@@ -405,9 +432,9 @@ def main():
         head = f"Дзеркало влади · автопостинг ({mode}) · {now_local:%d.%m %H:%M}\n\n"
         publish.notify(tg_token, admin_chat, head + "\n\n".join(report))
     if mode != "dry" and tg_token and admin_chat:
-        for key, text in offers:  # відхилені чернетки – власнику з кнопками «Опублікувати» / «Відхилити»
+        for key, text, card_path in offers:  # відхилені чернетки – власнику з карткою і кнопками
             try:
-                publish.ask_owner(tg_token, admin_chat, text, key)
+                publish.ask_owner(tg_token, admin_chat, text, key, card_path)
             except Exception as e:  # noqa: BLE001
                 log.warning("Не вдалося надіслати чернетку на розсуд: %s", e)
     log.info("Підсумок: опубліковано %d, відхилено %d, на розсуд власника %d", len(published), len(rejected),

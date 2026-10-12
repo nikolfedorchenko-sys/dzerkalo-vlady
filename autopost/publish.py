@@ -195,10 +195,18 @@ def send_telegram(token, chat_id, text, card_path=None):
                                            "link_preview_options": {"is_disabled": True}})
 
 
-def ask_owner(token, chat_id, text, key):
-    """Чернетка власнику з кнопками; натискання обробляє Cloudflare Worker (autopost/budylnyk)."""
+def ask_owner(token, chat_id, text, key, card_path=None):
+    """Чернетка власнику: картка, текст і кнопки; натискання обробляє Cloudflare Worker (autopost/budylnyk).
+    Підпис до фото – до 1024 знаків; довший текст іде окремим повідомленням під карткою, кнопки – під ним."""
     buttons = [[{"text": "✅ Опублікувати", "callback_data": f"pub:{key}"},
                 {"text": "❌ Відхилити", "callback_data": f"rej:{key}"}]]
+    if card_path:
+        with open(card_path, "rb") as f:
+            if len(text) <= 1024:
+                return _tg("sendPhoto", token, files={"photo": f}, data={
+                    "chat_id": chat_id, "caption": text, "parse_mode": "HTML",
+                    "reply_markup": json.dumps({"inline_keyboard": buttons})})
+            _tg("sendPhoto", token, data={"chat_id": chat_id}, files={"photo": f})
     _tg("sendMessage", token, json={"chat_id": chat_id, "text": text, "parse_mode": "HTML",
                                     "link_preview_options": {"is_disabled": True},
                                     "reply_markup": {"inline_keyboard": buttons}})
