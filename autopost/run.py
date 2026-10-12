@@ -168,9 +168,9 @@ def release(published, cfg, state, mode, now, report):
         url = publish.article_url(a["id"]) if a["_full"] else ""
         label = brain.RUBRICS.get(a["rubric"], "")
         src_title = ""  # рядок «Джерело» на картці не друкуємо
+        # На картці – рубрика, без червоної плашки «ТЕРМІНОВО» (рішення власника 12.10.2026)
         card_path = card.render_photo(OUT / f"{a['id']}.jpg", a["_photo"]["path"], label,
-                                      a["card_title"] or a["title"], src_title, photos.credit(a["_photo"]),
-                                      urgent=a.get("urgent", False))
+                                      a["card_title"] or a["title"], src_title, photos.credit(a["_photo"]))
         text = publish.telegram_text(a, url, cfg.get("channel_url"), cfg.get("submit_url"))
         where = []
         if mode == "dry":
