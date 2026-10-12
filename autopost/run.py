@@ -31,6 +31,7 @@ STATE = HERE / "state" / "state.json"
 OUT = HERE / "out"
 DRAFTS = HERE / "state" / "drafts"  # фото й картки чернеток «на розсуд» – зберігаються між запусками добу
 log = logging.getLogger("dv")
+CFG = yaml.safe_load((HERE / "config.yaml").read_text(encoding="utf-8"))
 
 
 def load_env():
@@ -113,10 +114,17 @@ def slim_texts(texts):
     return [{k: t.get(k) for k in ("source", "kind", "url", "image", "links")} for t in texts]
 
 
+def photo_check(a):
+    """Перевірка фото очима Claude для новини a (вимикається в config.yaml: check_photos: false)."""
+    if not CFG.get("check_photos", True) or not brain.engine():
+        return None
+    return lambda path: brain.check_photo(path, a)
+
+
 def draft_card(key, draft, texts, state):
     """Фото й картка для чернетки: ті самі підуть у пост, якщо власник натисне «Опублікувати»."""
     DRAFTS.mkdir(parents=True, exist_ok=True)
-    photo = photos.pick({**draft, "id": key}, texts, state, DRAFTS)
+    photo = photos.pick({**draft, "id": key}, texts, state, DRAFTS, photo_check(draft))
     label = brain.RUBRICS.get(draft.get("rubric"), "")
     card_path = card.render_photo(DRAFTS / f"{key}.jpg", photo["path"], label,
                                   draft.get("card_title") or draft["title"], "", photos.credit(photo))
@@ -160,7 +168,7 @@ def release(published, cfg, state, mode, now, report):
     OUT.mkdir(exist_ok=True)
     for a in published:
         a["id"] = publish.unique_id(data["news"], a["id"])
-        a["_photo"] = a.get("_photo") or photos.pick(a, a["_texts"], state, OUT)
+        a["_photo"] = a.get("_photo") or photos.pick(a, a["_texts"], state, OUT, photo_check(a))
     for a in full:
         a["_site_photo"] = photos.for_site(a, a["_photo"]) if mode == "live" else None
         data["news"].insert(0, publish.site_entry(a, a["id"], date, a["_site_photo"]))
@@ -274,6 +282,14 @@ def test_buttons(now):
     log.info("Тестову чернетку надіслано власнику (%s)", key)
 
 
+def test_photos():
+    """Дія «Перевірити фото»: Claude дивиться на фото трьох останніх новин сайту й пише в журнал, чи підходять."""
+    site = HERE.parent / "site"
+    for n in [x for x in publish.load_news()["news"] if (x.get("photo") or {}).get("file")][:3]:
+        v = brain.check_photo(site / n["photo"]["file"], {"title": n["title"], "lead": n.get("lead", "")})
+        log.info("%s | %s | %s – %s", "ПІДХОДИТЬ" if v["ok"] else "НЕ ПІДХОДИТЬ", n["title"], v["seen"], v["reason"])
+
+
 def delete_post(mode):
     """Дія «Видалити пост з Telegram»: прибирає пост з каналу за номером (Telegram дозволяє протягом 48 годин)."""
     msg_id = os.environ.get("DV_POST", "").strip().rsplit("/", 1)[-1]
@@ -301,6 +317,8 @@ def main():
         return delete_post(mode)
     if action == "test-buttons":
         return test_buttons(now)
+    if action == "test-photos":
+        return test_photos()
 
     state = load_state()
     keep_after = (now - timedelta(days=14)).isoformat()

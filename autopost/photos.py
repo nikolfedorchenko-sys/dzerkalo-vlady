@@ -71,7 +71,20 @@ def _mark_used(state, key):
     state.setdefault("photo_used", {})[key] = datetime.now(timezone.utc).isoformat()
 
 
-def _official(texts, out_path, state):
+def _ok(verify, path, what):
+    """Перевірка фото очима Claude (verify). Помилка перевірки – фото не беремо, краще фото з фотобанку."""
+    if not verify:
+        return True
+    try:
+        v = verify(path)
+    except Exception as e:  # noqa: BLE001
+        log.info("Фото не перевірено (%s) – пропускаю: %s", what, e)
+        return False
+    log.info("Фото %s: %s – %s (%s)", "ПІДХОДИТЬ" if v["ok"] else "НЕ ПІДХОДИТЬ", what, v["seen"], v["reason"])
+    return v["ok"]
+
+
+def _official(texts, out_path, state, verify=None):
     """Фото з офіційного джерела новини (сайт чи Telegram-канал органу влади)."""
     for t in texts:
         url = (t.get("image") or "").strip()
@@ -80,12 +93,15 @@ def _official(texts, out_path, state):
         url = url.replace("/uploads/logos_middle/", "/uploads/logos/")  # сайт Ради: більша версія
         if collect.download_photo(url, out_path):
             _mark_used(state, url)
+            if not _ok(verify, out_path, f"з джерела {t['source']}"):
+                continue
             return {"path": out_path, "author": t["source"], "license": "", "official": True}
     return None
 
 
-def _commons(query, out_path, state):
-    """Найрелевантніше нове фото з Wikimedia Commons з вільною ліцензією."""
+def _commons(query, out_path, state, verify=None, tries=3):
+    """Найрелевантніше нове фото з Wikimedia Commons з вільною ліцензією; кожне перевіряє Claude (verify),
+    до tries фото на запит."""
     used = state.get("photo_used", {})
     try:
         r = requests.get(COMMONS, headers=UA, timeout=40, params={
@@ -125,6 +141,11 @@ def _commons(query, out_path, state):
             if long.lower() in artist.lower():
                 artist = short
         _mark_used(state, title)
+        tries -= 1
+        if not _ok(verify, out_path, f"Wikimedia «{title[5:60]}»"):
+            if tries <= 0:
+                return None
+            continue
         return {"path": out_path, "author": f"{artist[:60]} / Wikimedia Commons",
                 "license": lic.replace("Public domain", "суспільне надбання"), "official": False,
                 "source": ii.get("descriptionurl", "")}
@@ -141,16 +162,18 @@ def _from_bank(theme, state):
             "official": False}
 
 
-def pick(a, texts, state, out_dir):
-    """Повертає фото для новини a: path (локальний файл), author, license, official."""
-    photo = _official(texts, out_dir / f"{a['id']}-src.jpg", state)
+def pick(a, texts, state, out_dir, verify=None):
+    """Повертає фото для новини a: path (локальний файл), author, license, official.
+    verify(path) -> {seen, ok, reason}: Claude дивиться на фото (правила – правила/фото.md).
+    Фотобанк не перевіряємо – там лише відібрані вручну нейтральні фото за темами."""
+    photo = _official(texts, out_dir / f"{a['id']}-src.jpg", state, verify)
     if photo:
         log.info("Фото: з джерела (%s)", photo["author"])
         return photo
     for q in [a.get("photo_query"), a.get("photo_query_alt")]:
         if not q:
             continue
-        photo = _commons(q, out_dir / f"{a['id']}-wm.jpg", state)
+        photo = _commons(q, out_dir / f"{a['id']}-wm.jpg", state, verify)
         time.sleep(1)
         if photo:
             log.info("Фото: Wikimedia за запитом «%s» (%s)", q, photo["author"])

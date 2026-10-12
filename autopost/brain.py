@@ -48,11 +48,13 @@ TG_TAGS = "Список хештегів: " + ", ".join(HASHTAGS) + "."
 PHOTO_THEMES = ("- photo_query: запит англійською (2–5 слів) для пошуку фото на Wikimedia Commons, яке прямо показує предмет новини: "
                 "конкретне місце, будівлю, об'єкт чи подію (напр. «Kyiv Metro train», «Verkhovna Rada session hall», "
                 "«Kyiv thermal power plant», «Kyiv apartment block damaged»). Не абстракції й не імена людей. "
-                "Завжди з «Kyiv» чи «Ukraine» – фото має бути з України.\n"
+                "Завжди з «Kyiv» чи «Ukraine» – фото має бути з України. Запит описує те, що буквально видно на фото "
+                "(будівлю, залу, об'єкт), а не подію чи людину.\n"
                 "- photo_query_alt: запасний запит, ширший (напр. «Kyiv metro», «Ukraine power line»).\n"
                 "- photo_theme: тема фото на випадок, якщо пошук нічого не дасть, одна з: "
                 + "; ".join(f"{k} ({v})" for k, v in photos.THEMES.items()) + ".")
 TRIAGE_TASK = rule("відбір")
+PHOTO_TASK = rule("фото")
 REVIEW_TASK = rule("перевірка")
 WRITE_TASK = f"""Напиши матеріал ДВ про сюжет нижче, спираючись тільки на тексти джерел. Один сюжет – три тексти: сайт, Telegram, Facebook.
 
@@ -176,23 +178,28 @@ def engine():
     return None
 
 
-def _ask(task, content, schema, effort, model):
-    return (_ask_max if engine() == "max" else _ask_api)(task, content, schema, effort, model)
+def _ask(task, content, schema, effort, model, image=None):
+    return (_ask_max if engine() == "max" else _ask_api)(task, content, schema, effort, model, image)
 
 
-def _ask_max(task, content, schema, effort, model):
-    """Запит через Claude Code на підписці Max: без інструментів, тільки текст → JSON за схемою."""
+def _ask_max(task, content, schema, effort, model, image=None):
+    """Запит через Claude Code на підписці Max → JSON за схемою. Без інструментів; якщо є image –
+    лише інструмент Read, щоб Claude подивився на фото (копія лежить у тимчасовій папці)."""
     exe = shutil.which("claude") or shutil.which("claude.exe") or shutil.which("claude.cmd")
     if not exe:
         raise RuntimeError("Не знайдено Claude Code (claude) – його ставить робочий процес GitHub")
     if exe.lower().endswith(".cmd"):  # Windows: обгортка npm ламає лапки в JSON, кличемо claude.exe напряму
         native = os.path.join(os.path.dirname(exe), "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe")
         exe = native if os.path.exists(native) else exe
+    tools = ["--tools", "Read", "--allowedTools", "Read"] if image else ["--tools", ""]
     cmd = [exe, "-p", "--output-format", "json", "--json-schema", json.dumps(schema),
            "--system-prompt", BRAND, "--model", model, "--effort", effort,
-           "--tools", "", "--strict-mcp-config", "--no-session-persistence"]
+           *tools, "--strict-mcp-config", "--no-session-persistence"]
     # Порожня тимчасова папка – щоб Claude Code не підхопив CLAUDE.md і налаштування з репозиторію
     with tempfile.TemporaryDirectory() as cwd:
+        if image:
+            shutil.copy(image, Path(cwd) / "photo.jpg")
+            content = "Спершу відкрий інструментом Read файл photo.jpg у поточній папці і уважно роздивись фото.\n\n" + content
         proc = subprocess.run(cmd, input=f"{task}\n\n{content}", capture_output=True, text=True,
                               encoding="utf-8", cwd=cwd, timeout=900)
     try:
@@ -219,15 +226,20 @@ def _ask_max(task, content, schema, effort, model):
 _client = None
 
 
-def _ask_api(task, content, schema, effort, model):
+def _ask_api(task, content, schema, effort, model, image=None):
     """Запасний шлях: Claude API за ключем (платно окремо від підписки)."""
     global _client
     _client = _client or anthropic.Anthropic()
+    parts = [{"type": "text", "text": f"{task}\n\n{content}"}]
+    if image:
+        import base64
+        parts.insert(0, {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg",
+                                                      "data": base64.b64encode(Path(image).read_bytes()).decode()}})
     resp = _client.messages.create(
         model=model,
         max_tokens=16000,
         system=BRAND,
-        messages=[{"role": "user", "content": f"{task}\n\n{content}"}],
+        messages=[{"role": "user", "content": parts}],
         output_config={"effort": effort, "format": {"type": "json_schema", "schema": schema}},
         # Якщо фільтри безпеки моделі помилково відмовлять, запит сам повториться на іншій моделі.
         extra_headers={"anthropic-beta": "server-side-fallback-2026-07-01"},
@@ -306,3 +318,24 @@ def review(draft, texts):
     content = ("ЧЕРНЕТКА:\n" + json.dumps(draft, ensure_ascii=False, indent=1)
                + "\n\nТЕКСТИ ДЖЕРЕЛ:\n\n" + _sources_block(texts))
     return _ask(REVIEW_TASK, content, REVIEW_SCHEMA, "medium", MODEL_FAST)
+
+
+PHOTO_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "seen": STR,
+        "ok": {"type": "boolean"},
+        "reason": STR,
+    },
+    "required": ["seen", "ok", "reason"],
+    "additionalProperties": False,
+}
+
+
+def check_photo(image, draft):
+    """Claude дивиться на фото й вирішує, чи воно підходить до новини (правила – правила/фото.md).
+    Повертає {seen: що на фото, ok, reason}."""
+    news = "\n".join(x for x in [draft.get("title", ""), draft.get("lead", ""), " ".join(draft.get("telegram", []))] if x)
+    content = (f"НОВИНА:\n{news}\n\nОпиши одним реченням, що на фото (seen), і виріши, чи воно підходить до новини (ok). "
+               "У reason – коротко чому.")
+    return _ask(PHOTO_TASK, content, PHOTO_SCHEMA, "low", MODEL_FAST, image=image)

@@ -20,6 +20,7 @@ on:
           - "Опублікувати чернетку"
           - "Видалити пост з Telegram"
           - "Тест кнопок"
+          - "Перевірити фото"
       drafts:
         description: "Чернетки для публікації (ставить бот, коли ви тиснете «Опублікувати»)"
         type: string
@@ -86,7 +87,7 @@ jobs:
       - name: Запуск
         env:
           DV_MODE: ${{ vars.DV_MODE || 'test' }}
-          DV_ACTION: ${{ inputs.action == 'Перевірити Facebook' && 'facebook-check' || inputs.action == 'Опублікувати чернетку' && 'publish-draft' || inputs.action == 'Видалити пост з Telegram' && 'delete-post' || inputs.action == 'Тест кнопок' && 'test-buttons' || '' }}
+          DV_ACTION: ${{ inputs.action == 'Перевірити Facebook' && 'facebook-check' || inputs.action == 'Опублікувати чернетку' && 'publish-draft' || inputs.action == 'Видалити пост з Telegram' && 'delete-post' || inputs.action == 'Тест кнопок' && 'test-buttons' || inputs.action == 'Перевірити фото' && 'test-photos' || '' }}
           DV_DRAFTS: ${{ inputs.drafts }}
           DV_POST: ${{ inputs.post }}
           DV_MODEL: ${{ vars.DV_MODEL }}             # модель для текстів (за замовчуванням Opus)
