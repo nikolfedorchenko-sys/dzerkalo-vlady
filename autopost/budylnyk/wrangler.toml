@@ -3,6 +3,7 @@
 # Секрети Worker: GH_TOKEN, NEWS_BOT_TOKEN, AUTOPOST_BOT_TOKEN (останній ставить той самий робочий процес).
 name = "dv-autopost-budylnyk"
 main = "index.js"
+account_id = "07983bbf698c3bfbf893b410c40e4e70"   # акаунт Cloudflare (не секрет)
 compatibility_date = "2025-09-01"
 workers_dev = true   # адреса для бота «Надіслати новину»
 

@@ -85,7 +85,7 @@
 **Secrets** (приховані):
 - `CLAUDE_CODE_OAUTH_TOKEN` – токен підписки Max (команда `claude setup-token`, діє рік, до ~жовтня 2027);
 - `TG_BOT_TOKEN` – токен бота @dzerkalo_vlady_autopost_bot;
-- `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` – для розгортання будильника (див. розділ «Будильник»);
+- `CLOUDFLARE_API_TOKEN` – для розгортання будильника (див. розділ «Будильник»);
 - `FB_PAGE_TOKEN` – постійний токен сторінки Facebook;
 - `ANTHROPIC_API_KEY` – не потрібен; тільки якщо колись перейдемо на платний API.
 
@@ -110,7 +110,7 @@ https://github.com/nikolfedorchenko-sys/dzerkalo-vlady/actions/workflows/autopos
 Папка `budylnyk/`. Розгортається сам через GitHub Actions (`.github/workflows/budylnyk.yml`) після кожної зміни в цій папці.
 Для цього в GitHub Secrets (https://github.com/nikolfedorchenko-sys/dzerkalo-vlady/settings/secrets/actions) мають бути:
 - `CLOUDFLARE_API_TOKEN` – токен Cloudflare з шаблону «Edit Cloudflare Workers» (https://dash.cloudflare.com/profile/api-tokens);
-- `CLOUDFLARE_ACCOUNT_ID` – номер акаунта Cloudflare (https://dash.cloudflare.com → праворуч «Account ID»).
+Номер акаунта Cloudflare вписано в `budylnyk/wrangler.toml` (він не секретний).
 Секрети самого Worker: `GH_TOKEN` (запуск робота), `NEWS_BOT_TOKEN` (бот «Надіслати новину»), `AUTOPOST_BOT_TOKEN` (кнопки; ставиться автоматично з `TG_BOT_TOKEN`).
 Журнал кожного запуску – там само; картки за останні 7 днів лежать у запуску в розділі Artifacts → cards.
 
