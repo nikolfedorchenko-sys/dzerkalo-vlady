@@ -143,7 +143,7 @@ def offer_draft(state, draft, kind, story, texts, problems, now):
     state.setdefault("pending", {})[key] = {
         "at": now.isoformat(), "kind": kind, "tg": tg, "story": story, "problems": problems, "photo": photo,
         "draft": {k: v for k, v in draft.items() if not k.startswith("_")}, "texts": slim_texts(texts)}
-    where = ("сайт + Facebook" if kind == "full" else "Facebook") + (" + Telegram" if tg else "")
+    where = ("сайт + Facebook" if kind == "full" else "замітка на сайті + Facebook") + (" + Telegram" if tg else "")
     preview = publish.telegram_text(draft, "", "", "")
     head = f"<b>На ваш розсуд</b> ({where}, оцінка {story['importance']}/10)"
     if kind == "full":
@@ -161,15 +161,16 @@ def release(published, cfg, state, mode, now, report):
     tg_chat = os.environ.get("TG_CHANNEL_ID" if mode == "live" else "TG_TEST_CHANNEL_ID", "")
     fb_page, fb_token = os.environ.get("FB_PAGE_ID", ""), os.environ.get("FB_PAGE_TOKEN", "")
 
-    # Повні матеріали – на сайт
+    # На сайт – усе: повні статті й короткі замітки (у старих чернетках без lead заміток немає)
     full = [a for a in published if a["_full"]]
+    site = [a for a in published if a.get("lead") and a.get("facts")]
     data = publish.load_news()
     date = now_local.strftime("%Y-%m-%dT%H:%M")
     OUT.mkdir(exist_ok=True)
     for a in published:
         a["id"] = publish.unique_id(data["news"], a["id"])
         a["_photo"] = a.get("_photo") or photos.pick(a, a["_texts"], state, OUT, photo_check(a))
-    for a in full:
+    for a in reversed(site):  # найважливіша – найвище в стрічці
         a["_site_photo"] = photos.for_site(a, a["_photo"]) if mode == "live" else None
         data["news"].insert(0, publish.site_entry(a, a["id"], date, a["_site_photo"]))
 
@@ -178,19 +179,19 @@ def release(published, cfg, state, mode, now, report):
         changed = publish.update_home(data, full, now_local, lim) or changed
         if publish.update_number_of_day(data, full, now_local):
             log.info("Цифра дня: %s – %s", data["numberOfDay"]["value"], data["numberOfDay"]["text"])
-        if full or changed:
+        if site or changed:
             publish.save_news(data)
-            msg = ("Автопостинг: " + "; ".join(a["title"] for a in full)) if full else \
+            msg = ("Автопостинг: " + "; ".join(a["title"] for a in site)) if site else \
                 "Автопостинг: оновити головну й зняти «Терміново» зі старих новин"
-            if publish.git_push(msg) and full:
-                publish.wait_for_site([a["id"] for a in full])
-    elif full:
-        drafts = [publish.site_entry(a, a["id"], date) for a in full]
+            if publish.git_push(msg) and site:
+                publish.wait_for_site([a["id"] for a in site])
+    elif site:
+        drafts = [publish.site_entry(a, a["id"], date) for a in site]
         (OUT / "drafts.json").write_text(json.dumps(drafts, ensure_ascii=False, indent=2), encoding="utf-8")
 
     fb_n = 0
     for a in published:
-        url = publish.article_url(a["id"]) if a["_full"] else ""
+        url = publish.article_url(a["id"]) if a in site else ""
         label = brain.RUBRICS.get(a["rubric"], "")
         src_title = ""  # рядок «Джерело» на картці не друкуємо
         # На картці – рубрика, без червоної плашки «ТЕРМІНОВО» (рішення власника 12.10.2026)
@@ -200,7 +201,7 @@ def release(published, cfg, state, mode, now, report):
         where = []
         if mode == "dry":
             (OUT / f"{a['id']}.telegram.html").write_text(text, encoding="utf-8")
-            if a["_full"]:
+            if a in site:
                 (OUT / f"{a['id']}.facebook.txt").write_text(a["facebook"], encoding="utf-8")
                 (OUT / f"{a['id']}.site.json").write_text(json.dumps(publish.site_entry(a, a["id"], date),
                                                           ensure_ascii=False, indent=2), encoding="utf-8")
@@ -213,8 +214,8 @@ def release(published, cfg, state, mode, now, report):
                     where.append("Telegram" + (" (пробний)" if mode == "test" else ""))
                 except Exception as e:  # noqa: BLE001
                     report.append(f"Telegram не прийняв пост: {escape(str(e))}")
-            if mode == "live" and a["_full"]:
-                where.append("сайт")
+            if mode == "live" and a in site:
+                where.append("сайт" if a["_full"] else "сайт (замітка)")
             if mode == "live" and a.get("facebook"):
                 if fb_page and fb_token:
                     try:
@@ -428,8 +429,8 @@ def main():
                 draft["_story"], draft["_full"], draft["_texts"] = story, kind == "full", texts
                 draft["_tg"] = story.get("scope") != "regional"
                 published.append(draft)
-                log.info("ГОТОВО (%s): %s", "сайт+FB" + ("+TG" if draft["_tg"] else "") if kind == "full"
-                         else "TG+FB", draft["title"])
+                log.info("ГОТОВО (%s): %s", ("сайт+FB" if kind == "full" else "замітка на сайті+FB")
+                         + ("+TG" if draft["_tg"] else ""), draft["title"])
             else:
                 log.info("ВІДХИЛЕНО: %s – %s", draft.get("title"), "; ".join(verdict["problems"]))
                 if draft.get("telegram"):  # чернетка є – власник може опублікувати її кнопкою в боті

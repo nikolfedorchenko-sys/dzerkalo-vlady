@@ -277,7 +277,7 @@ def write(story, texts):
     return _ask(task, content, ARTICLE_SCHEMA, "high", MODEL)
 
 
-SHORT_TASK = f"""Напиши короткий пост ДВ для Telegram про сюжет нижче, спираючись тільки на тексти джерел.
+SHORT_TASK = f"""Напиши коротку новину ДВ про сюжет нижче, спираючись тільки на тексти джерел: замітку для сайту, пост для Telegram і Facebook.
 
 Поля:
 - id: коротка адреса латиницею через дефіс, 3–6 слів.
@@ -287,6 +287,11 @@ SHORT_TASK = f"""Напиши короткий пост ДВ для Telegram п�
 - sources: тільки офіційні джерела влади з наданого списку (сайти й канали органів влади, позначені official) – назва органу й посилання. Медіа сюди не включай ніколи. Якщо офіційного джерела немає – порожній список.
 - urgent: true тільки якщо рішення вже ухвалено або подія відбувається зараз.
 {PHOTO_THEMES}
+
+САЙТ (коротка замітка)
+- lead: 1–2 речення – головне: хто, що вирішив чи заявив, коли.
+- facts: 2–3 короткі абзаци фактів з джерел (цифри, дати, хто сказав). Без думки ДВ.
+- impact: одне-два речення «Що це означає для тебе» – прямий наслідок для людей, тільки з того, що є в джерелах; невідомо – так і напиши.
 
 TELEGRAM
 {rule("telegram")}
@@ -300,8 +305,10 @@ SHORT_SCHEMA = {
     "type": "object",
     "properties": {k: ARTICLE_SCHEMA["properties"][k]
                    for k in ("id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt",
+                             "lead", "facts", "impact",
                              "tg_title", "telegram", "hashtags", "facebook", "sources", "urgent")},
     "required": ["id", "rubric", "title", "card_title", "photo_theme", "photo_query", "photo_query_alt",
+                 "lead", "facts", "impact",
                  "tg_title", "telegram", "hashtags", "facebook", "sources", "urgent"],
     "additionalProperties": False,
 }
