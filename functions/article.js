@@ -7,7 +7,7 @@ export async function onRequestGet(context) {
   const page = await context.next();
   try {
     const id = new URL(context.request.url).searchParams.get("id");
-    if (!id) return page;
+    if (!id) return notFound(page);
     const news = await loadNews(context);
     const n = news.find((x) => x.id === id);
     if (!n) return notFound(page);

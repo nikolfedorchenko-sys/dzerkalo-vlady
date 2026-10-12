@@ -1,4 +1,4 @@
-"""Полегшені версії фото для сайту: для кожного site/assets/photos/*.jpg|png
+"""Полегшені версії фото для сайту: для кожного site/assets/photos/**/*.jpg|png (з підпапками auto/ і bank/)
 створює поруч NAME-640.webp (телефони) і NAME-1280.webp (комп'ютери).
 Оригінал лишається – сайт бере його, якщо полегшеної версії немає.
 
@@ -14,7 +14,7 @@ QUALITY = 76
 force = "--force" in sys.argv
 
 made = 0
-for src in sorted(PHOTOS.iterdir()):
+for src in sorted(PHOTOS.rglob("*")):
     if src.suffix.lower() not in (".jpg", ".jpeg", ".png"):
         continue
     im = None

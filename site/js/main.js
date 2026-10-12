@@ -18,8 +18,13 @@
   /* Рубрики в меню шапки – як у затвердженому макеті. */
   var NAV = ['kyivrada', 'verkhovna-rada', 'uriad', 'rozsliduvannia', 'perevirka-faktiv', 'dumka'];
 
+  /* На живому сайті адреси без .html (/article?id=…) – інакше кожен клік іде через перенаправлення,
+     а Google бачить дві адреси однієї сторінки. Локально (start-site.bat) – з .html. */
+  var LOCAL = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  function href(page) { return LOCAL ? page + '.html' : (page === 'index' ? '/' : '/' + page); }
+
   var TELEGRAM = 'https://t.me/dzerkalo_vlady';
-  var SEND_NEWS = 'about.html#contact';
+  var SEND_NEWS = href('about') + '#contact';
   var MONTHS = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
   var MONTHS_SHORT = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
 
@@ -58,8 +63,8 @@
     for (var i = 0; i < RUBRICS.length; i++) if (RUBRICS[i].slug === slug) return RUBRICS[i].name;
     return '';
   }
-  function rubricUrl(slug) { return slug ? 'rubric.html?r=' + encodeURIComponent(slug) : 'rubric.html'; }
-  function articleUrl(n) { return 'article.html?id=' + encodeURIComponent(n.id); }
+  function rubricUrl(slug) { return slug ? href('rubric') + '?r=' + encodeURIComponent(slug) : href('rubric'); }
+  function articleUrl(n) { return href('article') + '?id=' + encodeURIComponent(n.id); }
 
   /* Дата «2026-10-09T09:55» або «2026-10-09» – у місцевому часі. */
   function parseDate(s) {
@@ -118,14 +123,14 @@
       return '<a href="' + rubricUrl(slug) + '" data-rubric="' + slug + '">' + esc(rubricName(slug)) + '</a>';
     }).join('');
     return '<div class="container"><header class="header" id="header">' +
-      '<a class="header__logo" href="index.html" aria-label="Дзеркало влади – на головну"><img src="assets/logos/dv-wordmark.svg" alt="Дзеркало влади" width="300" height="26"></a>' +
+      '<a class="header__logo" href="' + href('index') + '" aria-label="Дзеркало влади – на головну"><img src="assets/logos/dv-wordmark.svg" alt="Дзеркало влади" width="300" height="26"></a>' +
       '<nav class="nav" id="nav" aria-label="Рубрики">' + links + '<a class="nav__send" href="' + SEND_NEWS + '">Надіслати новину</a></nav>' +
       '<div class="header__actions">' +
       '<button type="button" class="icon-btn" id="search-btn" aria-label="Пошук" aria-expanded="false" aria-controls="search">' + ICON_SEARCH + '</button>' +
       '<a class="btn header__send" href="' + SEND_NEWS + '">Надіслати новину</a>' +
       '<button type="button" class="icon-btn menu-btn" id="menu-btn" aria-label="Відкрити меню" aria-expanded="false" aria-controls="nav">' + ICON_MENU + '</button>' +
       '</div>' +
-      '<form class="search" id="search" action="rubric.html" role="search" hidden>' +
+      '<form class="search" id="search" action="' + href('rubric') + '" role="search" hidden>' +
       '<label class="sr-only" for="q">Пошук новин</label>' +
       '<input id="q" name="q" type="search" placeholder="Пошук новин" autocomplete="off">' +
       '<button class="btn" type="submit">Шукати</button></form>' +
@@ -138,8 +143,8 @@
       '<div class="footer__brand"><img src="assets/logos/dv-wordmark.svg" alt="Дзеркало влади" width="300" height="26">' +
       '<p>Незалежне медіа про владу в Україні. Кожен факт – з джерелом, кожна думка – підписана.</p></div>' +
       '<nav class="footer__nav" aria-label="Про медіа">' +
-      '<a href="about.html">Про нас</a><a href="about.html#how">Редакційна політика</a>' +
-      '<a href="' + SEND_NEWS + '">Надіслати новину</a><a href="about.html#contact">Реклама</a>' +
+      '<a href="' + href('about') + '">Про нас</a><a href="' + href('about') + '#how">Редакційна політика</a>' +
+      '<a href="' + SEND_NEWS + '">Надіслати новину</a><a href="' + href('about') + '#contact">Реклама</a>' +
       '<a href="' + TELEGRAM + '">Telegram</a></nav>' +
       '<nav class="footer__nav footer__nav--rubrics" aria-label="Усі рубрики">' + rubrics + '</nav>' +
       '</div>' +
@@ -298,7 +303,7 @@
         var u = safeUrl(s.url);
         return '<li>' + (u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(s.title) + '</a>' : esc(s.title)) + '</li>';
       }).join('') + '</ol>' : '') +
-      '<div class="sources__fix">Знайшли помилку? <a href="about.html#contact">Напишіть редакції</a> – виправимо й позначимо це в тексті.</div></section>');
+      '<div class="sources__fix">Знайшли помилку? <a href="' + href('about') + '#contact">Напишіть редакції</a> – виправимо й позначимо це в тексті.</div></section>');
     return out.join('');
   }
 
@@ -308,7 +313,7 @@
     var n = id ? news.filter(function (x) { return x.id === id; })[0] : news.filter(function (x) { return x.home === 'hero'; })[0] || news[0];
     if (!n) {
       document.title = 'Матеріал не знайдено – Дзеркало влади';
-      main.innerHTML = '<div class="empty narrow"><h1 class="article__title">Матеріал не знайдено</h1><p>Можливо, посилання застаріло або новину перенесли.</p><a class="btn btn--arrow" href="index.html">На головну' + ARROW + '</a></div>';
+      main.innerHTML = '<div class="empty narrow"><h1 class="article__title">Матеріал не знайдено</h1><p>Можливо, посилання застаріло або новину перенесли.</p><a class="btn btn--arrow" href="' + href('index') + '">На головну' + ARROW + '</a></div>';
       return;
     }
     setMeta(n.title, n.lead || '');
@@ -369,7 +374,7 @@
       setActiveNav(slug);
       var input = $('#q'); if (input && q) input.value = q;
 
-      var chips = '<a class="chip" href="rubric.html"' + (!slug ? ' aria-current="page"' : '') + '>Усі</a>' +
+      var chips = '<a class="chip" href="' + href('rubric') + '"' + (!slug ? ' aria-current="page"' : '') + '>Усі</a>' +
         RUBRICS.map(function (r) {
           return '<a class="chip" href="' + rubricUrl(r.slug) + '"' + (r.slug === slug ? ' aria-current="page"' : '') + '>' + esc(r.name) + '</a>';
         }).join('');
@@ -380,7 +385,7 @@
         '<p class="meta" aria-live="polite">' + list.length + ' ' + plural(list.length, 'матеріал', 'матеріали', 'матеріалів') + '</p></div>' +
         (list.length ? '<div class="grid">' + list.map(function (n) { return cardHTML(n, { short: true }); }).join('') + '</div>'
           : '<div class="empty"><h2>' + (q ? 'Нічого не знайшли' : 'Тут поки немає матеріалів') + '</h2><p>' + (q ? 'Спробуйте інше слово або перегляньте всі новини.' : 'Щойно в цій рубриці зʼявляться новини, вони будуть тут.') + '</p>' +
-            '<a class="btn btn--arrow" href="rubric.html">Усі новини' + ARROW + '</a></div>');
+            '<a class="btn btn--arrow" href="' + href('rubric') + '">Усі новини' + ARROW + '</a></div>');
     }
 
     /* Фільтр без перезавантаження сторінки. */

@@ -166,6 +166,16 @@ def credit(photo):
     return ", ".join(x for x in (photo["author"], photo["license"]) if x)
 
 
+def webp_versions(path, img):
+    """Полегшені NAME-640.webp і NAME-1280.webp поруч із фото – сайт бере їх першими
+    (як tools/optimize_photos.py), інакше браузер спершу отримує 404 і лише тоді вантажить JPEG."""
+    for w in (640, 1280):
+        copy = img.copy()
+        if copy.width > w:
+            copy = copy.resize((w, round(copy.height * w / copy.width)), Image.LANCZOS)
+        copy.save(path.with_name(f"{path.stem}-{w}.webp"), "WEBP", quality=76, method=6)
+
+
 def for_site(a, photo):
     """Блок photo для статті на сайті; нові фото копіюються в site/assets/photos/auto/."""
     if photo.get("file"):
@@ -176,6 +186,7 @@ def for_site(a, photo):
         img = Image.open(photo["path"]).convert("RGB")
         img.thumbnail((1280, 1280))
         img.save(SITE / rel, "JPEG", quality=82, optimize=True)
+        webp_versions(SITE / rel, img)
     entry = {"file": rel, "alt": a["title"], "author": photo["author"], "license": photo["license"]}
     if photo["official"]:
         entry["author"], entry["license"] = f"{photo['author']} (пресслужба)", ""
