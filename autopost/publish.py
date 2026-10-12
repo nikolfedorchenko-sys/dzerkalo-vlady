@@ -112,6 +112,29 @@ def expire_urgent(data, now_local, hours):
     return changed
 
 
+def update_home(data, full, now_local, lim):
+    """Головна сайту: важлива свіжа стаття (від hero_min_importance балів або «Терміново») стає головною;
+    закріплені вручну головна й картки знімаються, коли старші за hero_hours / card_hours –
+    тоді сайт сам показує найсвіжіші новини."""
+    changed = False
+    now = now_local.replace(tzinfo=None)
+    top = [a for a in full if a.get("urgent") or a["_story"]["importance"] >= lim["hero_min_importance"]]
+    if top:
+        best = max(top, key=lambda a: (a["_story"]["importance"], bool(a.get("urgent"))))
+        for n in data["news"]:
+            if n.get("home") == "hero" and n["id"] != best["id"]:
+                n.pop("home")
+            if n["id"] == best["id"]:
+                n["home"] = "hero"
+        changed = True
+    for n in data["news"]:
+        hours = {"hero": lim["hero_hours"], "card": lim["card_hours"]}.get(n.get("home"))
+        if hours and (now - _parse_local(n["date"])).total_seconds() > hours * 3600:
+            n.pop("home")
+            changed = True
+    return changed
+
+
 def _parse_local(s):
     from datetime import datetime
     return datetime.fromisoformat(s if "T" in s else s + "T00:00")

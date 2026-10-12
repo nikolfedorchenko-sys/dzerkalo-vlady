@@ -866,7 +866,6 @@
       "id": "raketnyi-udar-kyiv-10-zhovtnia",
       "rubric": "misto",
       "kicker": "Київ · Безпека",
-      "home": "hero",
       "urgent": true,
       "urgentUntil": "2026-10-10T21:00",
       "title": "Ракетний удар по Києву: влучання в ресторан на Оболоні, четверо постраждалих",
@@ -1112,7 +1111,6 @@
           "url": "https://t.me/Denys_Smyhal/13193"
         }
       ],
-      "home": "card",
       "cardTitle": "Світло є, мереж немає: уряд пояснив графіки"
     },
     {
@@ -1162,7 +1160,6 @@
           "url": "https://t.me/dtek_ua/4592"
         }
       ],
-      "home": "card",
       "cardTitle": "Світло 10 жовтня: графіки і де зарядитися"
     },
     {
@@ -1208,8 +1205,7 @@
           "title": "LIGA.net: тарифи не підвищуватимуть до кінця квітня 2027 року",
           "url": "https://biz.liga.net/ua/energy/news/taryfy-na-svitlo-ne-pidvyshchuvatymut-do-kintsia-kvitnia-2027-roku"
         }
-      ],
-      "home": "card"
+      ]
     },
     {
       "id": "nich-10-zhovtnia-160-droniv",

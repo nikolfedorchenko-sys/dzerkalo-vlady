@@ -167,12 +167,13 @@ def release(published, cfg, state, mode, now, report):
 
     if mode == "live":
         changed = publish.expire_urgent(data, now_local, lim["urgent_hours"])
+        changed = publish.update_home(data, full, now_local, lim) or changed
         if publish.update_number_of_day(data, full, now_local):
             log.info("Цифра дня: %s – %s", data["numberOfDay"]["value"], data["numberOfDay"]["text"])
         if full or changed:
             publish.save_news(data)
             msg = ("Автопостинг: " + "; ".join(a["title"] for a in full)) if full else \
-                "Автопостинг: зняти «Терміново» зі старих новин"
+                "Автопостинг: оновити головну й зняти «Терміново» зі старих новин"
             if publish.git_push(msg) and full:
                 publish.wait_for_site([a["id"] for a in full])
     elif full:
