@@ -11,6 +11,7 @@
 ## Напрями роботи (кожен – в окремому чаті)
 - Сайт – папка `site/`, інструкція `САЙТ.md`. Живий сайт: https://dzerkalo-vlady.com/ (запасна адреса – https://dzerkalo-vlady.pages.dev/)
 - Автопостинг у соцмережі – папка `autopost/`, завдання `autopost/TASK.md`.
+- Трафік (SEO, Google Новини, UKR.NET, взаємопіар у Telegram, реклама Facebook) – папка `traffic/`, план `traffic/PLAN.md`.
 
 ## Стиль сайту – «преміум v2» (важливо)
 Для САЙТУ діють кольори, шрифти й форми з `design/site-v2.css`, а не палітра з `brand/tokens.css`:
