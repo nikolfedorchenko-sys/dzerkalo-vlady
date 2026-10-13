@@ -166,12 +166,13 @@ def next_slot(state, now, cfg):
     return max(now, datetime.fromisoformat(last) + timedelta(minutes=random.randint(lo, hi)))
 
 
-def send_due(state, now, mode, report):
-    """Надсилає в Telegram пости з черги, яким настав час (запускається щопівгодини і на початку кожного запуску)."""
+def send_due(state, now, mode, report, cfg=None):
+    """Надсилає в Telegram один пост з черги, якому настав час (будильник о :17, :32, :47 і початок кожного запуску).
+    Лише один за раз: якщо черга запізнилася, решта посуваються з інтервалом 10–20 хв, а не виходять підряд."""
     token = os.environ.get("TG_BOT_TOKEN", "")
     chat = os.environ.get("TG_CHANNEL_ID" if mode == "live" else "TG_TEST_CHANNEL_ID", "")
     queue, sent = state.get("tg_queue", []), 0
-    while queue and queue[0]["due"] <= now.isoformat():
+    if queue and queue[0]["due"] <= now.isoformat():
         q = queue.pop(0)
         card_path = q.get("card") if q.get("card") and Path(q["card"]).exists() else None
         if mode != "dry" and token and chat:
@@ -184,7 +185,11 @@ def send_due(state, now, mode, report):
                 report.append(f"Telegram не прийняв пост «{escape(q['title'])}»: {escape(str(e))}")
         if card_path:
             Path(card_path).unlink(missing_ok=True)
-        now = max(now, datetime.now(timezone.utc))
+        lo, hi = (cfg or CFG)["limits"].get("tg_gap_minutes", [10, 20])
+        prev = now
+        for item in queue:  # решта – не раніше ніж через 10–20 хв одна після одної
+            prev = max(datetime.fromisoformat(item["due"]), prev + timedelta(minutes=random.randint(lo, hi)))
+            item["due"] = prev.isoformat()
     return sent
 
 
