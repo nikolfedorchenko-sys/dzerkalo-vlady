@@ -1,0 +1,12 @@
+# Стан будильника (Cloudflare Worker): які боти підключені, коли востаннє запускалася черга Telegram.
+# Нічого не змінює – лише показує /status у журналі запуску.
+name: Будильник – стан
+
+on:
+  workflow_dispatch:
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -sS https://dv-autopost-budylnyk.nikolfedorchenko.workers.dev/status
