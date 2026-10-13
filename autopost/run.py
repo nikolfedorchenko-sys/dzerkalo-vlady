@@ -165,12 +165,12 @@ def next_slot(state, now, cfg):
     return max(now, datetime.fromisoformat(state["tg_last"]) + timedelta(minutes=random.randint(lo, hi)))
 
 
-def to_outbox(due, text, card_path, title):
+def to_outbox(due, text, card_path, title, chat=""):
     """Пост, якому ще не час: його надішле окремий крок GitHub «Відправка» (autopost/outbox.py) рівно о due."""
     OUTBOX.mkdir(parents=True, exist_ok=True)
     name = f"{due.strftime('%Y%m%d%H%M%S')}-{abs(hash(title)) % 10**6}"
     card = shutil.copy(card_path, OUTBOX / f"{name}.jpg") if card_path and Path(card_path).exists() else None
-    (OUTBOX / f"{name}.json").write_text(json.dumps({"due": due.isoformat(), "text": text, "title": title,
+    (OUTBOX / f"{name}.json").write_text(json.dumps({"due": due.isoformat(), "text": text, "title": title, "chat": chat,
                                                      "card": Path(card).name if card else ""},
                                                     ensure_ascii=False), encoding="utf-8")
 
@@ -319,6 +319,16 @@ def test_photos():
         log.info("%s | %s | %s – %s", "ПІДХОДИТЬ" if v["ok"] else "НЕ ПІДХОДИТЬ", n["title"], v["seen"], v["reason"])
 
 
+def test_outbox(now):
+    """Дія «Тест відправки»: три пробні пости власнику в особисті з інтервалом 2 хв – так само, як у канал."""
+    admin = os.environ.get("TG_ADMIN_CHAT_ID", "")
+    for i in range(3):
+        due = now + timedelta(minutes=2 * i)
+        to_outbox(due, f"<b>Тест відправки {i + 1}/3</b>\n\nЗаплановано на {due.astimezone(KYIV):%H:%M}. "
+                       "У канал пости йдуть так само, лише з інтервалом 10–20 хв.", None, f"Тест {i + 1}", admin)
+    log.info("Три тестові пости покладено у відправку")
+
+
 def delete_post(mode):
     """Дія «Видалити пост з Telegram»: прибирає пост з каналу за номером (Telegram дозволяє протягом 48 годин)."""
     msg_id = os.environ.get("DV_POST", "").strip().rsplit("/", 1)[-1]
@@ -348,6 +358,8 @@ def main():
         return test_buttons(now)
     if action == "test-photos":
         return test_photos()
+    if action == "test-outbox":
+        return test_outbox(now)
 
     state = load_state()
     keep_after = (now - timedelta(days=14)).isoformat()

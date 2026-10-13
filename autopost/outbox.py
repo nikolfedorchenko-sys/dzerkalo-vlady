@@ -37,7 +37,7 @@ def main():
             time.sleep(wait)
         card = OUTBOX / q["card"] if q.get("card") else None
         try:
-            publish.send_telegram(token, chat, q["text"], card if card and card.exists() else None)
+            publish.send_telegram(token, q.get("chat") or chat, q["text"], card if card and card.exists() else None)
             log.info("Telegram: %s", q["title"])
         except Exception as e:  # noqa: BLE001
             log.warning("Telegram не прийняв «%s»: %s", q["title"], e)
