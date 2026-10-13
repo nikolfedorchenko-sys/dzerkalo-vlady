@@ -31,7 +31,7 @@ import publish  # noqa: E402
 KYIV = ZoneInfo("Europe/Kyiv")
 STATE = HERE / "state" / "state.json"
 OUT = HERE / "out"
-QUEUE = HERE / "state" / "queue"    # картки постів, що чекають своєї черги в Telegram
+OUTBOX = HERE / "outbox"            # пости, що вийдуть у Telegram пізніше (їх надсилає крок «Відправка»)
 DRAFTS = HERE / "state" / "drafts"  # фото й картки чернеток «на розсуд» – зберігаються між запусками добу
 log = logging.getLogger("dv")
 CFG = yaml.safe_load((HERE / "config.yaml").read_text(encoding="utf-8"))
@@ -157,40 +157,22 @@ def offer_draft(state, draft, kind, story, texts, problems, now):
 
 
 def next_slot(state, now, cfg):
-    """Коли може вийти наступний пост у Telegram: не раніше ніж через 10–20 хв (tg_gap_minutes)
-    після попереднього – і вже опублікованого, і того, що стоїть у черзі."""
+    """Коли може вийти наступний пост у Telegram: не раніше ніж через 10–20 хв (tg_gap_minutes) після попереднього –
+    і вже опублікованого, і того, що чекає у «відправці» (outbox) попереднього запуску."""
     lo, hi = cfg["limits"].get("tg_gap_minutes", [10, 20])
-    last = max([state.get("tg_last", "")] + [q["due"] for q in state.get("tg_queue", [])])
-    if not last:
+    if not state.get("tg_last"):
         return now
-    return max(now, datetime.fromisoformat(last) + timedelta(minutes=random.randint(lo, hi)))
+    return max(now, datetime.fromisoformat(state["tg_last"]) + timedelta(minutes=random.randint(lo, hi)))
 
 
-def send_due(state, now, mode, report, cfg=None):
-    """Надсилає в Telegram один пост з черги, якому настав час (будильник о :17, :32, :47 і початок кожного запуску).
-    Лише один за раз: якщо черга запізнилася, решта посуваються з інтервалом 10–20 хв, а не виходять підряд."""
-    token = os.environ.get("TG_BOT_TOKEN", "")
-    chat = os.environ.get("TG_CHANNEL_ID" if mode == "live" else "TG_TEST_CHANNEL_ID", "")
-    queue, sent = state.get("tg_queue", []), 0
-    if queue and queue[0]["due"] <= now.isoformat():
-        q = queue.pop(0)
-        card_path = q.get("card") if q.get("card") and Path(q["card"]).exists() else None
-        if mode != "dry" and token and chat:
-            try:
-                publish.send_telegram(token, chat, q["text"], card_path)
-                state["tg_last"] = now.isoformat()
-                sent += 1
-                log.info("Telegram (з черги): %s", q["title"])
-            except Exception as e:  # noqa: BLE001
-                report.append(f"Telegram не прийняв пост «{escape(q['title'])}»: {escape(str(e))}")
-        if card_path:
-            Path(card_path).unlink(missing_ok=True)
-        lo, hi = (cfg or CFG)["limits"].get("tg_gap_minutes", [10, 20])
-        prev = now
-        for item in queue:  # решта – не раніше ніж через 10–20 хв одна після одної
-            prev = max(datetime.fromisoformat(item["due"]), prev + timedelta(minutes=random.randint(lo, hi)))
-            item["due"] = prev.isoformat()
-    return sent
+def to_outbox(due, text, card_path, title):
+    """Пост, якому ще не час: його надішле окремий крок GitHub «Відправка» (autopost/outbox.py) рівно о due."""
+    OUTBOX.mkdir(parents=True, exist_ok=True)
+    name = f"{due.strftime('%Y%m%d%H%M%S')}-{abs(hash(title)) % 10**6}"
+    card = shutil.copy(card_path, OUTBOX / f"{name}.jpg") if card_path and Path(card_path).exists() else None
+    (OUTBOX / f"{name}.json").write_text(json.dumps({"due": due.isoformat(), "text": text, "title": title,
+                                                     "card": Path(card).name if card else ""},
+                                                    ensure_ascii=False), encoding="utf-8")
 
 
 def release(published, cfg, state, mode, now, report):
@@ -246,7 +228,7 @@ def release(published, cfg, state, mode, now, report):
                                                           ensure_ascii=False, indent=2), encoding="utf-8")
             where.append("чернетка в autopost/out")
         else:
-            # Telegram: не підряд, а з інтервалом 10–20 хв – наступні пости стають у чергу (send_due).
+            # Telegram: не підряд, а з інтервалом 10–20 хв – наступні пости йдуть у outbox, їх надішле крок «Відправка».
             # Регіональні новини в Telegram не йдуть – тільки на сайт і у Facebook.
             due = now if a.get("urgent") else next_slot(state, now, cfg)  # «Терміново» – без черги
             if tg_token and tg_chat and a["_tg"]:
@@ -258,10 +240,8 @@ def release(published, cfg, state, mode, now, report):
                     except Exception as e:  # noqa: BLE001
                         report.append(f"Telegram не прийняв пост: {escape(str(e))}")
                 else:
-                    QUEUE.mkdir(parents=True, exist_ok=True)
-                    queued = shutil.copy(card_path, QUEUE / Path(card_path).name)
-                    state.setdefault("tg_queue", []).append({"due": due.isoformat(), "text": text,
-                                                             "card": str(queued), "title": a["title"]})
+                    to_outbox(due, text, card_path, a["title"])
+                    state["tg_last"] = due.isoformat()
                     where.append(f"Telegram о {due.astimezone(KYIV):%H:%M}")
             if mode == "live" and a in site:
                 where.append("сайт" if a["_full"] else "сайт (замітка)")
@@ -380,15 +360,8 @@ def main():
             if f.name[:10] not in state["pending"]:
                 f.unlink()
     state["approved_done"] = {k: v for k, v in state.get("approved_done", {}).items() if v > keep_after}
-    if action == "send-queue":
-        report = []
-        send_due(state, now, mode, report)
-        save_state(state)
-        if report and mode != "dry":
-            publish.notify(os.environ.get("TG_BOT_TOKEN", ""), os.environ.get("TG_ADMIN_CHAT_ID", ""),
-                           "Дзеркало влади · черга Telegram\n\n" + "\n\n".join(report))
-        return
-    send_due(state, now, mode, [])  # що з черги вже на часі – одразу, до нових постів
+    for q in state.pop("tg_queue", []):  # залишок старої черги (до 13.10) – у відправку
+        to_outbox(datetime.fromisoformat(q["due"]), q["text"], q.get("card"), q["title"])
     if action == "publish-draft":
         keys = [k for k in os.environ.get("DV_DRAFTS", "").replace(" ", "").split(",") if k]
         return publish_approved(cfg, state, mode, now, keys)

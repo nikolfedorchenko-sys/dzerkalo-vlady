@@ -21,7 +21,6 @@ on:
           - "Видалити пост з Telegram"
           - "Тест кнопок"
           - "Перевірити фото"
-          - "Черга Telegram"
       drafts:
         description: "Чернетки для публікації (ставить бот, коли ви тиснете «Опублікувати»)"
         type: string
@@ -30,10 +29,6 @@ on:
         description: "Для «Видалити пост з Telegram»: посилання на пост, напр. https://t.me/dzerkalo_vlady/27"
         type: string
         default: ""
-
-concurrency:
-  group: autopost
-  cancel-in-progress: false
 
 permissions:
   contents: write             # щоб додавати новини в site/data/news.json
@@ -64,6 +59,9 @@ jobs:
     if: needs.check.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    concurrency:              # запуски йдуть по одному (спільна памʼять); «Відправка» нижче їх не тримає
+      group: autopost
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
@@ -88,7 +86,7 @@ jobs:
       - name: Запуск
         env:
           DV_MODE: ${{ vars.DV_MODE || 'test' }}
-          DV_ACTION: ${{ inputs.action == 'Перевірити Facebook' && 'facebook-check' || inputs.action == 'Опублікувати чернетку' && 'publish-draft' || inputs.action == 'Видалити пост з Telegram' && 'delete-post' || inputs.action == 'Тест кнопок' && 'test-buttons' || inputs.action == 'Перевірити фото' && 'test-photos' || inputs.action == 'Черга Telegram' && 'send-queue' || '' }}
+          DV_ACTION: ${{ inputs.action == 'Перевірити Facebook' && 'facebook-check' || inputs.action == 'Опублікувати чернетку' && 'publish-draft' || inputs.action == 'Видалити пост з Telegram' && 'delete-post' || inputs.action == 'Тест кнопок' && 'test-buttons' || inputs.action == 'Перевірити фото' && 'test-photos' || '' }}
           DV_DRAFTS: ${{ inputs.drafts }}
           DV_POST: ${{ inputs.post }}
           DV_MODEL: ${{ vars.DV_MODEL }}             # модель для текстів (за замовчуванням Opus)
@@ -113,9 +111,49 @@ jobs:
           key: autopost-state-v3-${{ github.run_id }}
 
       - uses: actions/upload-artifact@v4
+        with:
+          name: outbox
+          path: autopost/outbox/
+          retention-days: 1
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cards
           path: autopost/out/
           retention-days: 7
           if-no-files-found: ignore
+
+  # Відправка: пости, яким ще не час (Telegram без спаму – з інтервалом 10–20 хв), надсилаються тут у свій час.
+  # Цей крок чекає до години, але наступні запуски й кнопки «Опублікувати» на нього не чекають.
+  outbox:
+    needs: run
+    if: needs.run.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: autopost
+      - id: dl
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: outbox
+          path: autopost/outbox
+      - uses: actions/setup-python@v5
+        if: steps.dl.outcome == 'success'
+        with:
+          python-version: "3.12"
+      - name: Відправка в Telegram
+        if: steps.dl.outcome == 'success'
+        env:
+          DV_MODE: ${{ vars.DV_MODE || 'test' }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHANNEL_ID: ${{ vars.TG_CHANNEL_ID }}
+          TG_TEST_CHANNEL_ID: ${{ vars.TG_TEST_CHANNEL_ID }}
+          TG_ADMIN_CHAT_ID: ${{ vars.TG_ADMIN_CHAT_ID }}
+        run: |
+          pip install requests
+          python autopost/outbox.py

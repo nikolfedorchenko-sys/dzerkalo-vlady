@@ -19,3 +19,4 @@ out/
 
 # Службова папка Cloudflare (будильник)
 .wrangler/
+outbox/

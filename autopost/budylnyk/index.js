@@ -6,14 +6,7 @@
 //    схвалення зберігаються на добу в KV (APPROVALS), і робот у GitHub публікує всі схвалені чернетки.
 export default {
   async scheduled(event, env, ctx) {
-    // О :02 – звичайний запуск; о :17, :32, :47 – тільки черга Telegram (пости з інтервалом 10–20 хв)
-    const t = new Date(event.scheduledTime);
-    if (t.getUTCMinutes() < 10) {
-      if (t.getUTCHours() > 20) return; // звичайні запуски – 07–22 за Києвом (робот сам перевіряє години)
-      ctx.waitUntil(dispatch(env, { action: "За розкладом" }));
-    } else {
-      ctx.waitUntil(queueTick(env));
-    }
+    ctx.waitUntil(dispatch(env, { action: "За розкладом" }));
   },
 
   async fetch(request, env) {
@@ -58,7 +51,6 @@ export default {
         webhook: h.url ? h.url.replace(/^https:\/\/[^/]+/, "…") : "не підключено",
         pending: h.pending_update_count,
         last_error: h.last_error_message || "немає",
-        last_queue_tick: JSON.parse((await env.APPROVALS.get("last_queue_tick")) || "null"),
         last_dispatch_error: (await env.APPROVALS.get("last_dispatch_error")) || "немає",
       };
       return new Response(JSON.stringify(info, null, 1), { headers: { "content-type": "application/json; charset=utf-8" } });
@@ -139,37 +131,6 @@ async function hookSecret(env, token = env.NEWS_BOT_TOKEN) {
   const data = new TextEncoder().encode(`dv-news-${token}`);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 48);
-}
-
-// Черга Telegram: запускаємо робота, лише коли він зараз не працює. Інакше GitHub скасував би запуск,
-// що чекає в черзі (наприклад, публікацію схваленої чернетки), а пости з черги підуть наступного разу.
-async function queueTick(env) {
-  const note = (result) => env.APPROVALS.put("last_queue_tick", JSON.stringify({ at: new Date().toISOString(), result }));
-  try {
-    await queueTickInner(env, note);
-  } catch (e) {
-    await note(`помилка: ${e}`);
-  }
-}
-
-async function queueTickInner(env, note) {
-  const res = await fetch(`https://api.github.com/repos/${env.REPO}/actions/workflows/autopost.yml/runs?per_page=5`, {
-    headers: {
-      Authorization: `Bearer ${env.GH_TOKEN}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "dv-autopost-budylnyk",
-    },
-  });
-  if (res.ok) {
-    const { workflow_runs = [] } = await res.json();
-    const busy = workflow_runs.filter((r) => r.status !== "completed");
-    if (busy.length) return note(`пропущено: робот працює (${busy.map((r) => r.status).join(", ")})`);
-  } else {
-    await note(`GitHub (список запусків) відповів ${res.status}`);
-  }
-  const ok = await dispatch(env, { action: "Черга Telegram" });
-  await note(ok ? "запущено" : "GitHub не прийняв запуск");
 }
 
 async function dispatch(env, inputs) {
