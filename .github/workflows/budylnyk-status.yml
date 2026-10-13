@@ -1,12 +1,25 @@
 # Стан будильника (Cloudflare Worker): які боти підключені, коли востаннє запускалася черга Telegram.
-# Нічого не змінює – лише показує /status у журналі запуску.
+# Нічого не змінює. «Слухати журнал» – показує живий журнал будильника протягом 12 хвилин (для діагностики).
 name: Будильник – стан
 
 on:
   workflow_dispatch:
+    inputs:
+      tail:
+        description: "Слухати журнал будильника 12 хвилин"
+        type: boolean
+        default: false
 
 jobs:
   status:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        if: inputs.tail
+      - name: Журнал будильника
+        if: inputs.tail
+        working-directory: autopost/budylnyk
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: timeout 720 npx --yes wrangler@4 tail --format pretty || true
       - run: curl -sS https://dv-autopost-budylnyk.nikolfedorchenko.workers.dev/status
