@@ -8,7 +8,8 @@ compatibility_date = "2025-09-01"
 workers_dev = true   # адреса для бота «Надіслати новину»
 
 [triggers]
-crons = ["2 4-20 * * *"]   # щогодини в UTC; покриває 07–22 за Києвом і влітку, і взимку
+# щогодини в UTC (07–22 за Києвом і влітку, і взимку) + черга Telegram о :17, :32, :47
+crons = ["2 4-20 * * *", "17,32,47 4-21 * * *"]
 
 [vars]
 REPO = "nikolfedorchenko-sys/dzerkalo-vlady"

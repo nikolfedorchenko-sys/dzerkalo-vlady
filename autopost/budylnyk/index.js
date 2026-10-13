@@ -6,7 +6,12 @@
 //    схвалення зберігаються на добу в KV (APPROVALS), і робот у GitHub публікує всі схвалені чернетки.
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(wake(env));
+    // О :02 – звичайний запуск; о :17, :32, :47 – тільки черга Telegram (пости з інтервалом 10–20 хв)
+    if (event.cron.startsWith("2 ")) {
+      ctx.waitUntil(dispatch(env, { action: "За розкладом" }));
+    } else {
+      ctx.waitUntil(queueTick(env));
+    }
   },
 
   async fetch(request, env) {
@@ -132,8 +137,22 @@ async function hookSecret(env, token = env.NEWS_BOT_TOKEN) {
   return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 48);
 }
 
-async function wake(env) {
-  await dispatch(env, { action: "За розкладом" });
+// Черга Telegram: запускаємо робота, лише коли він зараз не працює. Інакше GitHub скасував би запуск,
+// що чекає в черзі (наприклад, публікацію схваленої чернетки), а пости з черги підуть наступного разу.
+async function queueTick(env) {
+  const res = await fetch(`https://api.github.com/repos/${env.REPO}/actions/workflows/autopost.yml/runs?per_page=5`, {
+    headers: {
+      Authorization: `Bearer ${env.GH_TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "dv-autopost-budylnyk",
+    },
+  });
+  if (res.ok) {
+    const { workflow_runs = [] } = await res.json();
+    if (workflow_runs.some((r) => r.status !== "completed")) return;
+  }
+  await dispatch(env, { action: "Черга Telegram" });
 }
 
 async function dispatch(env, inputs) {

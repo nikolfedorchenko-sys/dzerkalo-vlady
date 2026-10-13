@@ -6,6 +6,8 @@
   live – повна публікація: сайт, основний Telegram-канал, Facebook.
 """
 import hashlib
+import random
+import shutil
 import json
 import logging
 import os
@@ -29,6 +31,7 @@ import publish  # noqa: E402
 KYIV = ZoneInfo("Europe/Kyiv")
 STATE = HERE / "state" / "state.json"
 OUT = HERE / "out"
+QUEUE = HERE / "state" / "queue"    # картки постів, що чекають своєї черги в Telegram
 DRAFTS = HERE / "state" / "drafts"  # фото й картки чернеток «на розсуд» – зберігаються між запусками добу
 log = logging.getLogger("dv")
 CFG = yaml.safe_load((HERE / "config.yaml").read_text(encoding="utf-8"))
@@ -153,6 +156,38 @@ def offer_draft(state, draft, kind, story, texts, problems, now):
     return key, (text[:3990] + "…") if len(text) > 4000 else text, card_path
 
 
+def next_slot(state, now, cfg):
+    """Коли може вийти наступний пост у Telegram: не раніше ніж через 10–20 хв (tg_gap_minutes)
+    після попереднього – і вже опублікованого, і того, що стоїть у черзі."""
+    lo, hi = cfg["limits"].get("tg_gap_minutes", [10, 20])
+    last = max([state.get("tg_last", "")] + [q["due"] for q in state.get("tg_queue", [])])
+    if not last:
+        return now
+    return max(now, datetime.fromisoformat(last) + timedelta(minutes=random.randint(lo, hi)))
+
+
+def send_due(state, now, mode, report):
+    """Надсилає в Telegram пости з черги, яким настав час (запускається щопівгодини і на початку кожного запуску)."""
+    token = os.environ.get("TG_BOT_TOKEN", "")
+    chat = os.environ.get("TG_CHANNEL_ID" if mode == "live" else "TG_TEST_CHANNEL_ID", "")
+    queue, sent = state.get("tg_queue", []), 0
+    while queue and queue[0]["due"] <= now.isoformat():
+        q = queue.pop(0)
+        card_path = q.get("card") if q.get("card") and Path(q["card"]).exists() else None
+        if mode != "dry" and token and chat:
+            try:
+                publish.send_telegram(token, chat, q["text"], card_path)
+                state["tg_last"] = now.isoformat()
+                sent += 1
+                log.info("Telegram (з черги): %s", q["title"])
+            except Exception as e:  # noqa: BLE001
+                report.append(f"Telegram не прийняв пост «{escape(q['title'])}»: {escape(str(e))}")
+        if card_path:
+            Path(card_path).unlink(missing_ok=True)
+        now = max(now, datetime.now(timezone.utc))
+    return sent
+
+
 def release(published, cfg, state, mode, now, report):
     """Публікація готових матеріалів: повні – на сайт, далі Telegram і Facebook, у звіт – що й куди вийшло."""
     lim = cfg["limits"]
@@ -189,7 +224,6 @@ def release(published, cfg, state, mode, now, report):
         drafts = [publish.site_entry(a, a["id"], date) for a in site]
         (OUT / "drafts.json").write_text(json.dumps(drafts, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    fb_n = 0
     for a in published:
         url = publish.article_url(a["id"]) if a in site else ""
         label = brain.RUBRICS.get(a["rubric"], "")
@@ -207,23 +241,32 @@ def release(published, cfg, state, mode, now, report):
                                                           ensure_ascii=False, indent=2), encoding="utf-8")
             where.append("чернетка в autopost/out")
         else:
-            # Регіональні новини в Telegram не йдуть – тільки на сайт і у Facebook
+            # Telegram: не підряд, а з інтервалом 10–20 хв – наступні пости стають у чергу (send_due).
+            # Регіональні новини в Telegram не йдуть – тільки на сайт і у Facebook.
+            due = now if a.get("urgent") else next_slot(state, now, cfg)  # «Терміново» – без черги
             if tg_token and tg_chat and a["_tg"]:
-                try:
-                    publish.send_telegram(tg_token, tg_chat, text, card_path)
-                    where.append("Telegram" + (" (пробний)" if mode == "test" else ""))
-                except Exception as e:  # noqa: BLE001
-                    report.append(f"Telegram не прийняв пост: {escape(str(e))}")
+                if due <= now:
+                    try:
+                        publish.send_telegram(tg_token, tg_chat, text, card_path)
+                        state["tg_last"] = now.isoformat()
+                        where.append("Telegram" + (" (пробний)" if mode == "test" else ""))
+                    except Exception as e:  # noqa: BLE001
+                        report.append(f"Telegram не прийняв пост: {escape(str(e))}")
+                else:
+                    QUEUE.mkdir(parents=True, exist_ok=True)
+                    queued = shutil.copy(card_path, QUEUE / Path(card_path).name)
+                    state.setdefault("tg_queue", []).append({"due": due.isoformat(), "text": text,
+                                                             "card": str(queued), "title": a["title"]})
+                    where.append(f"Telegram о {due.astimezone(KYIV):%H:%M}")
             if mode == "live" and a in site:
                 where.append("сайт" if a["_full"] else "сайт (замітка)")
             if mode == "live" and a.get("facebook"):
                 if fb_page and fb_token:
                     try:
-                        # Facebook: перший пост одразу, наступні – з кроком fb_interval_minutes (розклад Facebook)
-                        at = None if not fb_n else now.timestamp() + fb_n * lim["fb_interval_minutes"] * 60
+                        # Facebook: тоді ж, коли й Telegram; розклад Facebook приймає час щонайменше за 10 хв
+                        at = None if due <= now else max(due, now + timedelta(minutes=11)).timestamp()
                         publish.send_facebook(fb_page, fb_token, a, url, card_path, cfg.get("channel_url"), at)
                         where.append("Facebook" + (f" о {datetime.fromtimestamp(at, KYIV):%H:%M}" if at else ""))
-                        fb_n += 1
                     except Exception as e:  # noqa: BLE001
                         report.append(f"Facebook не прийняв пост: {escape(str(e))}")
         state["published"].append({"at": now.isoformat(), "id": a["id"], "title": a["title"], "mode": mode,
@@ -332,6 +375,15 @@ def main():
             if f.name[:10] not in state["pending"]:
                 f.unlink()
     state["approved_done"] = {k: v for k, v in state.get("approved_done", {}).items() if v > keep_after}
+    if action == "send-queue":
+        report = []
+        send_due(state, now, mode, report)
+        save_state(state)
+        if report and mode != "dry":
+            publish.notify(os.environ.get("TG_BOT_TOKEN", ""), os.environ.get("TG_ADMIN_CHAT_ID", ""),
+                           "Дзеркало влади · черга Telegram\n\n" + "\n\n".join(report))
+        return
+    send_due(state, now, mode, [])  # що з черги вже на часі – одразу, до нових постів
     if action == "publish-draft":
         keys = [k for k in os.environ.get("DV_DRAFTS", "").replace(" ", "").split(",") if k]
         return publish_approved(cfg, state, mode, now, keys)
