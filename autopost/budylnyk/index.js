@@ -7,7 +7,9 @@
 export default {
   async scheduled(event, env, ctx) {
     // О :02 – звичайний запуск; о :17, :32, :47 – тільки черга Telegram (пости з інтервалом 10–20 хв)
-    if (event.cron.startsWith("2 ")) {
+    const t = new Date(event.scheduledTime);
+    if (t.getUTCMinutes() < 10) {
+      if (t.getUTCHours() > 20) return; // звичайні запуски – 07–22 за Києвом (робот сам перевіряє години)
       ctx.waitUntil(dispatch(env, { action: "За розкладом" }));
     } else {
       ctx.waitUntil(queueTick(env));
