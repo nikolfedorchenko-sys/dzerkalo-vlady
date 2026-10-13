@@ -9,6 +9,10 @@ on:
         description: "Слухати журнал будильника 30 хвилин"
         type: boolean
         default: false
+      fix_schedule:
+        description: "Записати розклад будильника напряму в Cloudflare"
+        type: boolean
+        default: false
 
 jobs:
   status:
@@ -22,4 +26,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: timeout 1800 npx --yes wrangler@4 tail --format pretty || true
+      - name: Розклад у Cloudflare (і виправлення, якщо він не збігається з wrangler.toml)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          API="https://api.cloudflare.com/client/v4/accounts/07983bbf698c3bfbf893b410c40e4e70/workers/scripts/dv-autopost-budylnyk/schedules"
+          echo "Зараз у Cloudflare:"; curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$API"; echo
+          if [ "${{ inputs.fix_schedule }}" = "true" ]; then
+            echo "Записую розклад: 2,17,32,47 4-21 * * *"
+            curl -sS -X PUT -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+              --data '[{"cron":"2,17,32,47 4-21 * * *"}]' "$API"; echo
+          fi
       - run: curl -sS https://dv-autopost-budylnyk.nikolfedorchenko.workers.dev/status
