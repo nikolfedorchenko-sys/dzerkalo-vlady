@@ -360,8 +360,10 @@ def main():
             if f.name[:10] not in state["pending"]:
                 f.unlink()
     state["approved_done"] = {k: v for k, v in state.get("approved_done", {}).items() if v > keep_after}
-    for q in state.pop("tg_queue", []):  # залишок старої черги (до 13.10) – у відправку
-        to_outbox(datetime.fromisoformat(q["due"]), q["text"], q.get("card"), q["title"])
+    for q in state.pop("tg_queue", []):  # залишок старої черги (до 13.10) – у відправку, з інтервалом
+        due = max(datetime.fromisoformat(q["due"]), next_slot(state, now, cfg))
+        to_outbox(due, q["text"], q.get("card"), q["title"])
+        state["tg_last"] = due.isoformat()
     if action == "publish-draft":
         keys = [k for k in os.environ.get("DV_DRAFTS", "").replace(" ", "").split(",") if k]
         return publish_approved(cfg, state, mode, now, keys)
