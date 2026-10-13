@@ -56,6 +56,8 @@ export default {
         webhook: h.url ? h.url.replace(/^https:\/\/[^/]+/, "…") : "не підключено",
         pending: h.pending_update_count,
         last_error: h.last_error_message || "немає",
+        last_queue_tick: JSON.parse((await env.APPROVALS.get("last_queue_tick")) || "null"),
+        last_dispatch_error: (await env.APPROVALS.get("last_dispatch_error")) || "немає",
       };
       return new Response(JSON.stringify(info, null, 1), { headers: { "content-type": "application/json; charset=utf-8" } });
     }
@@ -140,6 +142,15 @@ async function hookSecret(env, token = env.NEWS_BOT_TOKEN) {
 // Черга Telegram: запускаємо робота, лише коли він зараз не працює. Інакше GitHub скасував би запуск,
 // що чекає в черзі (наприклад, публікацію схваленої чернетки), а пости з черги підуть наступного разу.
 async function queueTick(env) {
+  const note = (result) => env.APPROVALS.put("last_queue_tick", JSON.stringify({ at: new Date().toISOString(), result }));
+  try {
+    await queueTickInner(env, note);
+  } catch (e) {
+    await note(`помилка: ${e}`);
+  }
+}
+
+async function queueTickInner(env, note) {
   const res = await fetch(`https://api.github.com/repos/${env.REPO}/actions/workflows/autopost.yml/runs?per_page=5`, {
     headers: {
       Authorization: `Bearer ${env.GH_TOKEN}`,
@@ -150,9 +161,13 @@ async function queueTick(env) {
   });
   if (res.ok) {
     const { workflow_runs = [] } = await res.json();
-    if (workflow_runs.some((r) => r.status !== "completed")) return;
+    const busy = workflow_runs.filter((r) => r.status !== "completed");
+    if (busy.length) return note(`пропущено: робот працює (${busy.map((r) => r.status).join(", ")})`);
+  } else {
+    await note(`GitHub (список запусків) відповів ${res.status}`);
   }
-  await dispatch(env, { action: "Черга Telegram" });
+  const ok = await dispatch(env, { action: "Черга Telegram" });
+  await note(ok ? "запущено" : "GitHub не прийняв запуск");
 }
 
 async function dispatch(env, inputs) {
@@ -167,6 +182,10 @@ async function dispatch(env, inputs) {
     },
     body: JSON.stringify({ ref: "main", inputs }),
   });
-  if (!res.ok) console.log(`GitHub відповів ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    console.log(`GitHub відповів ${res.status}: ${text}`);
+    await env.APPROVALS.put("last_dispatch_error", `${new Date().toISOString()} ${res.status}: ${text.slice(0, 300)}`);
+  }
   return res.ok;
 }

@@ -41,4 +41,4 @@ jobs:
           URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
           echo "Адреса Worker: $URL"
           sleep 5
-          curl -sS "$URL/setup"
+          curl -sS "$URL/setup"; echo; curl -sS "$URL/status"
