@@ -230,7 +230,9 @@ def release(published, cfg, state, mode, now, report):
         else:
             # Telegram: не підряд, а з інтервалом 10–20 хв – наступні пости йдуть у outbox, їх надішле крок «Відправка».
             # Регіональні новини в Telegram не йдуть – тільки на сайт і у Facebook.
-            due = now if a.get("urgent") else next_slot(state, now, cfg)  # «Терміново» – без черги
+            # Без черги – лише справді термінове: «Терміново» і оцінка від bypass_importance (9)
+            hot = a.get("urgent") and a["_story"]["importance"] >= lim["bypass_importance"]
+            due = now if hot else next_slot(state, now, cfg)
             if tg_token and tg_chat and a["_tg"]:
                 if due <= now:
                     try:
@@ -459,6 +461,8 @@ def main():
             texts = [{**it, "text": collect.full_text(it)} for it in picked]
             try:
                 draft = fix_dashes((brain.write if kind == "full" else brain.write_short)(story, texts))
+                # «Терміново» вирішує відбір, а не автор тексту, і лише для важливого (від 8 балів)
+                draft["urgent"] = bool(story["urgent"] and story["importance"] >= lim.get("urgent_min_importance", 8))
                 problems = check_draft(draft, texts)
                 verdict = brain.review(draft, texts) if not problems else {"ok": False, "problems": problems}
             except brain.LimitReached as e:
