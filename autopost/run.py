@@ -469,6 +469,18 @@ def main():
                 draft["urgent"] = bool(story["urgent"] and story["importance"] >= lim.get("urgent_min_importance", 8))
                 problems = check_draft(draft, texts)
                 verdict = brain.review(draft, texts) if not problems else {"ok": False, "problems": problems}
+                if not verdict["ok"] and not problems and CFG.get("revise_once", True):
+                    # Одна спроба виправити саме те, що назвав редактор, і повторна перевірка
+                    log.info("ВИПРАВЛЯЮ: %s – %s", draft.get("title"), "; ".join(verdict["problems"]))
+                    fixed = fix_dashes(brain.revise(draft, texts, verdict["problems"], kind == "full"))
+                    fixed["urgent"] = draft["urgent"]
+                    problems = check_draft(fixed, texts)
+                    verdict2 = brain.review(fixed, texts) if not problems else {"ok": False, "problems": problems}
+                    if verdict2["ok"]:
+                        draft, verdict = fixed, verdict2
+                        log.info("ВИПРАВЛЕНО й перевірено: %s", draft["title"])
+                    else:  # на розсуд власнику – вже виправлена версія з новими зауваженнями
+                        draft, verdict = fixed, {"ok": False, "problems": verdict2["problems"]}
             except brain.LimitReached as e:
                 log.warning("Ліміт підписки Max вичерпано, решту сюжетів пропускаю: %s", e)
                 break

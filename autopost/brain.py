@@ -346,3 +346,19 @@ def check_photo(image, draft):
     content = (f"НОВИНА:\n{news}\n\nОпиши одним реченням, що на фото (seen), і виріши, чи воно підходить до новини (ok). "
                "У reason – коротко чому.")
     return _ask(PHOTO_TASK, content, PHOTO_SCHEMA, "low", MODEL_FAST, image=image)
+
+
+REVISE_TASK = """Випусковий редактор ДВ не пропустив чернетку нижче й назвав, що не так. Виправ ТІЛЬКИ названі місця:
+прибери або переформулюй кожне твердження, якого немає в джерелах; думку подай як думку; заяву – як заяву («заявив», «за словами»).
+Нічого нового не додавай, нічого з власної пам'яті. Що не можеш підтвердити джерелами – просто прибери.
+Решту тексту, стиль і всі службові поля залиш як були. Поверни повну виправлену чернетку в тому самому форматі."""
+
+
+def revise(draft, texts, problems, full):
+    """Одна спроба виправити чернетку за зауваженнями редактора (перед тим як віддати її власнику на розсуд)."""
+    clean = {k: v for k, v in draft.items() if not k.startswith("_")}
+    content = ("ЗАУВАЖЕННЯ РЕДАКТОРА:\n" + "\n".join(f"- {p}" for p in problems)
+               + "\n\nЧЕРНЕТКА:\n" + json.dumps(clean, ensure_ascii=False, indent=1)
+               + "\n\nТЕКСТИ ДЖЕРЕЛ:\n\n" + _sources_block(texts))
+    schema = ARTICLE_SCHEMA if full else SHORT_SCHEMA
+    return _ask(REVISE_TASK, content, schema, "medium", MODEL if full else MODEL_FAST)
