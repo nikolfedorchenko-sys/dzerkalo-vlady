@@ -239,7 +239,7 @@
     news.forEach(function (n) { if (cards.length < 3 && n !== hero && cards.indexOf(n) === -1) cards.push(n); });
     cardsEl.innerHTML = cards.slice(0, 3).map(function (n) { return cardHTML(n, { short: true, lead: false }); }).join('');
 
-    var feed = news.filter(function (n) { return n !== hero; }).slice(0, 6);
+    var feed = news.filter(function (n) { return n !== hero; }).slice(0, 15);
     feedEl.innerHTML = feed.map(function (n) {
       return '<a class="feed__item" href="' + articleUrl(n) + '"><span class="feed__time">' + fmtFeed(n) + '</span>' +
         '<span class="feed__title">' + (isUrgent(n) ? '<span class="urgent-word">Терміново.</span> ' : '') + esc(n.title) + '</span></a>';

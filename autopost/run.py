@@ -134,10 +134,9 @@ def draft_card(key, draft, texts, state):
     return {**photo, "path": str(photo["path"])}, card_path
 
 
-def offer_draft(state, draft, kind, story, texts, problems, now):
+def offer_draft(state, draft, kind, story, texts, problems, now, tg=True):
     """Відхилену чернетку зберігаємо на добу; повертає (ключ, текст, картка) для повідомлення власнику з кнопками."""
     key = hashlib.sha1(f"{draft['id']}{now.isoformat()}".encode()).hexdigest()[:10]
-    tg = story.get("scope") != "regional"
     try:
         photo, card_path = draft_card(key, draft, texts, state)
     except Exception as e:  # noqa: BLE001
@@ -247,7 +246,8 @@ def release(published, cfg, state, mode, now, report):
                     where.append(f"Telegram о {due.astimezone(KYIV):%H:%M}")
             if mode == "live" and a in site:
                 where.append("сайт" if a["_full"] else "сайт (замітка)")
-            if mode == "live" and a.get("facebook"):
+            # Facebook – лише те, що йде в Telegram, і повні статті (новини лише для сайту – без Facebook)
+            if mode == "live" and a.get("facebook") and (a["_tg"] or a["_full"]):
                 if fb_page and fb_token:
                     try:
                         # Facebook: тоді ж, коли й Telegram; розклад Facebook приймає час щонайменше за 10 хв
@@ -417,17 +417,19 @@ def main():
         return story["urgent"] or story["importance"] >= lim["bypass_importance"]
 
     def plan(story):
-        """None – пропустити; "full" – сайт + Facebook (+ Telegram); "short" – Telegram і Facebook.
-        Регіональні сюжети в Telegram не йдуть: тільки сайт і Facebook, якщо дотягують до оцінки сайту."""
-        if len(published) >= lim["max_posts_per_run"]:
+        """(вид, чи в Telegram) або None. Вид: "full" – повна стаття, "short" – коротка замітка.
+        Сайт отримує більше, ніж Telegram: до site_max_per_run новин за запуск, від site_only_min_importance балів.
+        Telegram – до max_posts_per_run найважливіших (від min_importance), без регіональних."""
+        if len(published) >= lim.get("site_max_per_run", lim["max_posts_per_run"]):
             return None
         fulls = sum(1 for a in published if a["_full"])
         can_full = story["importance"] >= lim["site_min_importance"] and (fulls < full_left or important(story))
         if story.get("scope") == "regional":
-            return "full" if can_full else None
-        if sum(1 for a in published if a["_tg"]) >= tg_left and not important(story):
-            return None
-        return "full" if can_full else "short"
+            return ("full", False) if can_full else None
+        tgs = sum(1 for a in published if a["_tg"])
+        tg = (story["importance"] >= lim["min_importance"] and tgs < lim["max_posts_per_run"]
+              and (tgs < tg_left or important(story)))
+        return ("full" if can_full else "short"), tg
 
     if fresh:
         # 2. Відбір сюжетів
@@ -444,15 +446,17 @@ def main():
         for s in stories:
             log.info("  сюжет %2d/10%s [%s]: %s (%s)", s["importance"], " ТЕРМІНОВО" if s["urgent"] else "",
                      s.get("scope"), s["topic"], s["rubric"])
-        stories = [s for s in stories if s["importance"] >= lim["min_importance"] and s["items"]]
+        stories = [s for s in stories if s["importance"] >= lim.get("site_only_min_importance", lim["min_importance"])
+                   and s["items"]]
         stories.sort(key=lambda s: (-s["urgent"], -s["importance"]))
         log.info("Сюжетів для публікації: %d", len(stories))
 
         # 3. Написання і перевірка
         for story in stories:
-            kind = plan(story)
-            if not kind:
+            planned = plan(story)
+            if not planned:
                 continue
+            kind, tg = planned
             picked = [fresh[i] for i in story["items"] if 0 <= i < len(fresh)][:4]
             if not picked:
                 continue
@@ -475,14 +479,14 @@ def main():
                 verdict, draft = {"ok": False, "problems": [f"помилка: {e}"]}, {"title": story["topic"]}
             if verdict["ok"]:
                 draft["_story"], draft["_full"], draft["_texts"] = story, kind == "full", texts
-                draft["_tg"] = story.get("scope") != "regional"
+                draft["_tg"] = tg
                 published.append(draft)
                 log.info("ГОТОВО (%s): %s", ("сайт+FB" if kind == "full" else "замітка на сайті+FB")
                          + ("+TG" if draft["_tg"] else ""), draft["title"])
             else:
                 log.info("ВІДХИЛЕНО: %s – %s", draft.get("title"), "; ".join(verdict["problems"]))
                 if draft.get("telegram"):  # чернетка є – власник може опублікувати її кнопкою в боті
-                    offers.append(offer_draft(state, draft, kind, story, texts, verdict["problems"], now))
+                    offers.append(offer_draft(state, draft, kind, story, texts, verdict["problems"], now, tg))
                 else:
                     rejected.append((draft.get("title", story["topic"]), verdict["problems"]))
 
