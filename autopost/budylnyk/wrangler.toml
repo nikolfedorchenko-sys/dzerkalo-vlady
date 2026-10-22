@@ -8,7 +8,8 @@ compatibility_date = "2025-09-01"
 workers_dev = true   # адреса для бота «Надіслати новину»
 
 [triggers]
-crons = ["2 4-20 * * *"]   # щогодини в UTC; покриває 07–22 за Києвом і влітку, і взимку
+# Автопостинг зупинено 22.10.2026 – будильник нікого не будить. Увімкнути: crons = ["2 4-20 * * *"]
+crons = []
 
 [vars]
 REPO = "nikolfedorchenko-sys/dzerkalo-vlady"

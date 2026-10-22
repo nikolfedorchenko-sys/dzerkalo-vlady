@@ -33,8 +33,8 @@ jobs:
           API="https://api.cloudflare.com/client/v4/accounts/07983bbf698c3bfbf893b410c40e4e70/workers/scripts/dv-autopost-budylnyk/schedules"
           echo "Зараз у Cloudflare:"; curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$API"; echo
           if [ "${{ inputs.fix_schedule }}" = "true" ]; then
-            echo "Записую розклад: 2 4-20 * * *"
+            echo "Записую розклад: порожній (автопостинг зупинено)"
             curl -sS -X PUT -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
-              --data '[{"cron":"2 4-20 * * *"}]' "$API"; echo
+              --data '[]' "$API"; echo
           fi
       - run: curl -sS https://dv-autopost-budylnyk.nikolfedorchenko.workers.dev/status

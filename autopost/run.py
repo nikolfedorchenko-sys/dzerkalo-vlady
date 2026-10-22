@@ -352,6 +352,9 @@ def main():
     now = datetime.now(timezone.utc)
     now_local = now.astimezone(KYIV)
     action = os.environ.get("DV_ACTION", "")
+    if cfg.get("enabled") is False:
+        log.info("Автопостинг вимкнено (enabled: false у config.yaml) – нічого не роблю")
+        return
     if action == "facebook-check":
         return facebook_check(cfg)
     if action == "delete-post":

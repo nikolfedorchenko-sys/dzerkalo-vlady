@@ -4,6 +4,7 @@
 import json
 import logging
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -21,6 +22,9 @@ log = logging.getLogger("dv")
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
+    if re.search(r"^enabled:\s*false", (HERE / "config.yaml").read_text(encoding="utf-8"), re.M):
+        log.info("Автопостинг вимкнено (enabled: false у config.yaml) – відкладені пости не надсилаю")
+        return
     items = sorted((json.loads(f.read_text(encoding="utf-8")) for f in OUTBOX.glob("*.json")),
                    key=lambda q: q["due"]) if OUTBOX.exists() else []
     if not items:

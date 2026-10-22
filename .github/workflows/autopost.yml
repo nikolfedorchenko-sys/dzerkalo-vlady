@@ -49,7 +49,9 @@ jobs:
         run: |
           H=$(TZ=Europe/Kyiv date +%H)
           SLOTS=$(grep -E '^slots:' autopost/config.yaml | cut -d'"' -f2)
-          if [ "${{ inputs.action }}" != "За розкладом" ] || echo " $SLOTS " | grep -q " $H "; then
+          if grep -qE '^enabled: *false' autopost/config.yaml; then
+            echo "go=false" >> "$GITHUB_OUTPUT"; echo "Автопостинг вимкнено (enabled: false у autopost/config.yaml)"
+          elif [ "${{ inputs.action }}" != "За розкладом" ] || echo " $SLOTS " | grep -q " $H "; then
             echo "go=true" >> "$GITHUB_OUTPUT"; echo "Зараз $H:00 за Києвом – працюємо"
           else
             echo "go=false" >> "$GITHUB_OUTPUT"; echo "Зараз $H:00 за Києвом – не година публікації ($SLOTS)"
